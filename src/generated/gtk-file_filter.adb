@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -98,6 +98,19 @@ package body Gtk.File_Filter is
       return Self;
    end Gtk_File_Filter_New;
 
+   ---------------------------------------
+   -- Gtk_File_Filter_New_From_Gvariant --
+   ---------------------------------------
+
+   function Gtk_File_Filter_New_From_Gvariant
+      (Variant : Glib.Variant.Gvariant) return Gtk_File_Filter
+   is
+      Self : constant Gtk_File_Filter := new Gtk_File_Filter_Record;
+   begin
+      Gtk.File_Filter.Initialize_From_Gvariant (Self, Variant);
+      return Self;
+   end Gtk_File_Filter_New_From_Gvariant;
+
    -------------
    -- Gtk_New --
    -------------
@@ -107,6 +120,19 @@ package body Gtk.File_Filter is
       Self := new Gtk_File_Filter_Record;
       Gtk.File_Filter.Initialize (Self);
    end Gtk_New;
+
+   ---------------------------
+   -- Gtk_New_From_Gvariant --
+   ---------------------------
+
+   procedure Gtk_New_From_Gvariant
+      (Self    : out Gtk_File_Filter;
+       Variant : Glib.Variant.Gvariant)
+   is
+   begin
+      Self := new Gtk_File_Filter_Record;
+      Gtk.File_Filter.Initialize_From_Gvariant (Self, Variant);
+   end Gtk_New_From_Gvariant;
 
    ----------------
    -- Initialize --
@@ -122,6 +148,22 @@ package body Gtk.File_Filter is
          Set_Object (Self, Internal);
       end if;
    end Initialize;
+
+   ------------------------------
+   -- Initialize_From_Gvariant --
+   ------------------------------
+
+   procedure Initialize_From_Gvariant
+      (Self    : not null access Gtk_File_Filter_Record'Class;
+       Variant : Glib.Variant.Gvariant)
+   is
+      function Internal (Variant : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_file_filter_new_from_gvariant");
+   begin
+      if not Self.Is_Created then
+         Set_Object (Self, Internal (Get_Object (Variant)));
+      end if;
+   end Initialize_From_Gvariant;
 
    ----------------
    -- Add_Custom --
@@ -206,9 +248,9 @@ package body Gtk.File_Filter is
    is
       procedure Internal
          (Self      : System.Address;
-          Mime_Type : Interfaces.C.Strings.chars_ptr);
+          Mime_Type : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_filter_add_mime_type");
-      Tmp_Mime_Type : Interfaces.C.Strings.chars_ptr := New_String (Mime_Type);
+      Tmp_Mime_Type : Gtkada.Types.Chars_Ptr := New_String (Mime_Type);
    begin
       Internal (Get_Object (Self), Tmp_Mime_Type);
       Free (Tmp_Mime_Type);
@@ -224,9 +266,9 @@ package body Gtk.File_Filter is
    is
       procedure Internal
          (Self    : System.Address;
-          Pattern : Interfaces.C.Strings.chars_ptr);
+          Pattern : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_filter_add_pattern");
-      Tmp_Pattern : Interfaces.C.Strings.chars_ptr := New_String (Pattern);
+      Tmp_Pattern : Gtkada.Types.Chars_Ptr := New_String (Pattern);
    begin
       Internal (Get_Object (Self), Tmp_Pattern);
       Free (Tmp_Pattern);
@@ -269,7 +311,7 @@ package body Gtk.File_Filter is
       (Self : not null access Gtk_File_Filter_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_filter_get_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -299,17 +341,31 @@ package body Gtk.File_Filter is
    is
       procedure Internal
          (Self : System.Address;
-          Name : Interfaces.C.Strings.chars_ptr);
+          Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_filter_set_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Name : Gtkada.Types.Chars_Ptr;
    begin
       if Name = "" then
-         Tmp_Name := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Name := Gtkada.Types.Null_Ptr;
       else
          Tmp_Name := New_String (Name);
       end if;
       Internal (Get_Object (Self), Tmp_Name);
       Free (Tmp_Name);
    end Set_Name;
+
+   -----------------
+   -- To_Gvariant --
+   -----------------
+
+   function To_Gvariant
+      (Self : not null access Gtk_File_Filter_Record)
+       return Glib.Variant.Gvariant
+   is
+      function Internal (Self : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_file_filter_to_gvariant");
+   begin
+      return From_Object (Internal (Get_Object (Self)));
+   end To_Gvariant;
 
 end Gtk.File_Filter;

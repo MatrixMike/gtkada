@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Parse a .gir file for any of the gtk+ libraries (gtk+, glib,...)
@@ -21,6 +21,7 @@ import copy
 from binding_gtkada import GtkAda
 from data import enums, interfaces, binding, user_data_params
 from data import destroy_data_params
+import sys
 
 # Unfortunately, generating the slot marshallers in a separate package
 # does not work since we end up with circularities in a number of
@@ -31,14 +32,14 @@ SHARED_SLOT_MARSHALLERS = False
 from optparse import OptionParser
 
 # Python interpreter version check: this script does not work with Python
-# version 2.6 or earlier!
+# version 3.7 or earlier!
 from sys import version_info
 version_string = '.'.join(map(str, version_info[0:3]))
-if version_info[0] < 2:
-    print('Need at least Python 2.7, got version ' + version_string)
+if version_info[0] < 3:
+    print(('Need at least Python 3.7, got version ' + version_string))
     quit(1)
-if version_info[0] == 2 and version_info[1] < 7:
-    print('Need at least Python 2.7, got version ' + version_string)
+if version_info[0] == 3 and version_info[1] < 7:
+    print(('Need at least Python 3.7, got version ' + version_string))
     quit(1)
 
 uri = "http://www.gtk.org/introspection/core/1.0"
@@ -132,13 +133,15 @@ class GIR(object):
 
             k = "%s/%s" % (namespace, nclass)
             for cl in root.findall(k):
-                self.classes[cl.get(ctype_qname)] = self._create_class(
-                    root, cl, is_interface=False,
-                    identifier_prefix=identifier_prefix)
+                if cl.get(ctype_qname) is not None:
+                    self.classes[cl.get(ctype_qname)] = self._create_class(
+                        root, cl, is_interface=False,
+                        identifier_prefix=identifier_prefix)
 
             k = "%s/%s" % (namespace, nconstant)
             for cl in root.findall(k):
                 self.constants[cl.get(ctype_qname)] = cl
+
 
             # Some <record> are defined with methods. They are bound the same
             # way in GtkAda, except that they do not derive from GObject
@@ -171,16 +174,16 @@ class GIR(object):
            no Ada binding.
         """
 
-        print "Missing bindings:"
+        print("Missing bindings:")
         count = 0
-        for name in sorted(gir.interfaces.iterkeys()):
+        for name in sorted(gir.interfaces.keys()):
             if name not in self.bound:
                 sys.stdout.write("%-28s" % (name + "(intf)", ))
                 count += 1
                 if (count % 4) == 0:
                     sys.stdout.write("\n")
 
-        for name in sorted(gir.classes.iterkeys()):
+        for name in sorted(gir.classes.keys()):
             if name not in self.bound:
                 sys.stdout.write("%-28s" % name)
                 # print '    "--%s", # Not tested yet, from Gio' % name
@@ -188,7 +191,7 @@ class GIR(object):
                 if (count % 4) == 0:
                     sys.stdout.write("\n")
 
-        print
+        print()
 
     def _get_class_node(self, rootNode, girname):
         """Find the <class> node in the same XML document as node that matches
@@ -229,13 +232,13 @@ class GIR(object):
 
     def generate(self, out, cout):
         """Generate Ada code for all packages"""
-        for pkg in self.packages.itervalues():
+        for pkg in self.packages.values():
             out.write(pkg.spec().encode('UTF-8'))
-            out.write("\n")
+            out.write(b"\n")
             out.write(pkg.body().encode('UTF-8'))
-            out.write("\n")
+            out.write(b"\n")
 
-        cout.write(self.ccode)
+        cout.write(self.ccode.encode("UTF-8"))
 
 
 class GlobalsBinder(object):
@@ -265,8 +268,8 @@ def _get_clean_doc(node):
 
     doc = node.findtext(ndoc, "")
     if doc:
-        doc = doc.replace(u"\u2019", "'").replace(
-            u"\u201c", '"').replace(u"\u201d", '"')
+        doc = doc.replace("\u2019", "'").replace(
+            "\u201c", '"').replace("\u201d", '"')
     return doc
 
 
@@ -448,7 +451,23 @@ class SubprogramProfile(object):
             n = p.name
             is_temporary = False
 
-            if self.returns is not None and p.mode != "in" and p.ada_binding:
+            # Restore original mode only for arrays now
+            # because generator is not adopted for c_mode = p.c_mod and
+            # generates incorrect code for example for instance parameters
+            c_mode = p.mode
+            if p.type.isArray and p.c_mode == "out" \
+               and p.is_caller_allocates:
+                # C expects an allocated array like for "in out" mode
+                # so we will pass an address of buffer's first element
+                # and do not expect allocation in C
+                c_mode = "in"
+
+            # Pass the array as is, without creating temporary variable
+            as_array = p.type.isArray and p.is_caller_allocates \
+                and p.c_mode in ("in", "in out", "out")
+
+            if self.returns is not None and p.mode != "in" and p.ada_binding \
+               and as_array is False:
                 n = "Acc_%s" % p.name
                 var = Local_Var(
                     name=n,
@@ -475,11 +494,14 @@ class SubprogramProfile(object):
             # end up with Interfaces.C.Strings.chars_ptr=""
 
             result.append(Parameter(
-                name=n, mode=p.mode, type=p.type,
+                name=n, mode=c_mode, type=p.type,
                 for_function=self.returns is not None,
                 default=p.default if not p.ada_binding else None,
                 is_temporary_variable=is_temporary,
-                ada_binding=p.ada_binding))
+                ada_binding=p.ada_binding,
+                c_mode=p.c_mode,
+                ownership=p.ownership,
+                is_caller_allocates=p.is_caller_allocates))
 
         return result
 
@@ -644,17 +666,25 @@ class SubprogramProfile(object):
             assert direction in ("in", "out", "inout", "access"), \
                 "Invalid value for direction: '%s'" % direction
 
+            is_allocated = (gtkparam.get_caller_allocates() or
+                            p.get("caller-allocates", None)) == "1"
+
+            ownership = (gtkparam.get_transfer_ownership() or
+                         p.get("transfer-ownership", "none")) == "full"
+
             if direction == "inout":
-                mode = "in out"
+                c_mode = "in out"
             elif direction in ("out", "access"):
-                mode = direction
+                c_mode = direction
             elif type.is_ptr:
-                mode = "in out"
+                c_mode = "in out"
             else:
-                mode = "in"
+                c_mode = "in"
 
             if is_function and direction not in ("in", "access"):
                 mode = "access"
+            else:
+                mode = c_mode
 
             doc = _get_clean_doc(p)
             if doc:
@@ -666,7 +696,10 @@ class SubprogramProfile(object):
                           mode=mode,
                           default=default,
                           ada_binding=ada_binding,
-                          doc=doc))
+                          doc=doc,
+                          c_mode=c_mode,
+                          ownership=ownership,
+                          is_caller_allocates=is_allocated))
 
         return result
 
@@ -854,7 +887,7 @@ class GIRClass(object):
         t = None
         if not inherited:
             try:
-                ip = node.iter(ninstanceparam).next()
+                ip = next(node.iter(ninstanceparam))
                 ipt = ip.find(ntype)
                 if ipt is not None:
                     ctype_name = ipt.get(ctype_qname)
@@ -907,7 +940,7 @@ class GIRClass(object):
         if profile.has_varargs() \
                 and gtkmethod.get_param("varargs").node is None:
             naming.add_cmethod(cname, cname)  # Avoid warning later on.
-            print "No binding for %s: varargs" % cname
+            print("No binding for %s: varargs" % cname)
             return None
 
         is_import = self._func_is_direct_import(profile) \
@@ -1027,7 +1060,7 @@ class GIRClass(object):
         """
 
         if len(cb) > 1:
-            print "No binding for %s: multiple callback parameters" % cname
+            print("No binding for %s: multiple callback parameters" % cname)
             return
         cb = cb[0]
 
@@ -1112,7 +1145,7 @@ end if;""" % (cb.name, call1, call2), exec2[2])
             section = self.pkg.section("Callbacks")
 
             if cb_user_data is None:
-                print "callback has no user data: %s" % cbname
+                print("callback has no user data: %s" % cbname)
                 # If the C function has no user data, we do not know how to
                 # generate a high-level binding, since we cannot go through an
                 # intermediate C function that transforms the parameters into
@@ -1127,6 +1160,10 @@ end if;""" % (cb.name, call1, call2), exec2[2])
                     "\ntype %s is %s" % (funcname, subp.spec(pkg=self.pkg)))
                 section.add(
                     "\npragma Convention (C, %s);" % funcname)
+                section.add(
+                    ("function To_Address is new Ada.Unchecked_Conversion\n"
+                     + "   (%s, System.Address);\n") % (cb_type_name,),
+                    in_spec=False)
 
             else:
                 # Generate a simpler version of the callback, without
@@ -1206,11 +1243,11 @@ end if;""" % (cb.name, call1, call2), exec2[2])
 
         if user_data is None:
             values = {destroy: "System.Null_Address",
-                      cb.name.lower(): "%s'Address" % cb.name}
+                      cb.name.lower(): "To_Address (%s)" % cb.name}
         elif cb_user_data is None:
             values = {destroy: "System.Null_Address",
                       cb.name.lower(): "Internal_%s'Address" % funcname,
-                      user_data.lower(): "%s'Address" % cb.name}
+                      user_data.lower(): "To_Address (%s)" % cb.name}
         else:
             nouser_profile.remove_param(destroy_data_params + [user_data])
             values = {destroy: "System.Null_Address",
@@ -1343,7 +1380,7 @@ end if;""" % (cb.name, call1, call2), exec2[2])
                     and gtkmethod.get_param("varargs").node is None:
 
                 naming.add_cmethod(cname, cname)  # Avoid warning later on.
-                print "No binding for %s: varargs" % cname
+                print("No binding for %s: varargs" % cname)
                 continue
 
             self._handle_constructor(
@@ -1778,7 +1815,7 @@ void %(cname)s (%(self)s* self, %(ctype)s val) {
                     """The following properties are defined for this widget.
 See Glib.Properties for more information on properties)""")
 
-                adaprops.sort(lambda x, y: cmp(x["name"], y["name"]))
+                adaprops.sort(key=lambda x: x["name"])
 
                 for p in adaprops:
                     prop_str = '   %(name)s_Property : constant %(ptype)s;' % p
@@ -2240,7 +2277,7 @@ end "+";""" % self._subst,
             section = self.pkg.section(
                 "Inherited subprograms (from interfaces)")
 
-            for impl in sorted(self.implements.iterkeys()):
+            for impl in sorted(self.implements.keys()):
                 impl = self.implements[impl]
                 if impl["name"] == "Buildable":
                     # Do not repeat for buildable, that's rarely used
@@ -2258,8 +2295,8 @@ end "+";""" % self._subst,
 
                 # Ignore interfaces that we haven't bound
                 if interf is not None and not hasattr(interf, "gtkpkg"):
-                    print "%s: methods for interface %s were not bound" % (
-                        self.name, impl["name"])
+                    print("%s: methods for interface %s were not bound" % (
+                        self.name, impl["name"]))
                 elif interf is not None:
                     all = interf.node.findall(nmethod)
                     for c in all:
@@ -2276,7 +2313,7 @@ end "+";""" % self._subst,
             section.add_comment(
                 "This class implements several interfaces. See Glib.Types")
 
-            for impl in sorted(self.implements.iterkeys()):
+            for impl in sorted(self.implements.keys()):
                 impl = self.implements[impl]
                 section.add_comment("")
                 section.add_comment('- "%(name)s"' % impl)
@@ -2408,8 +2445,8 @@ end "+";""" % self._subst,
                             "System.Address", pkg=self.pkg)
 
                 else:
-                    print "WARNING: Field '%s.%s' has no type" % (name, base)
-                    print " generated record is most certainly incorrect"
+                    print("WARNING: Field '%s.%s' has no type" % (name, base))
+                    print(" generated record is most certainly incorrect")
 
                 if ftype is not None:
                     if ftype.ada in ("GSList", "GList") and private:
@@ -2519,7 +2556,7 @@ end From_Object_Free;""" % {"typename": base}, in_spec=False)
         constants = []
         r = re.compile(regexp)
 
-        for name, node in gir.constants.iteritems():
+        for name, node in gir.constants.items():
             if r.match(name):
                 name = name.replace(prefix, "").title()
 
@@ -2528,10 +2565,25 @@ end From_Object_Free;""" % {"typename": base}, in_spec=False)
                 type = node.findall(ntype)
                 ctype = type[0].get(ctype_qname)
                 ftype = naming.type(name="", cname=ctype)
+                deprecated = node.get("deprecated")
+                deprecated_version =  node.get("deprecated-version")
 
-                constants.append(
-                    '%s : constant %s := "%s";' %
-                    (name, ftype.ada, node.get("value")))
+                constant_str = '%s : constant %s := "%s";' % (
+                    name,
+                    ftype.ada,
+                    node.get("value"),
+                )
+
+                if deprecated:
+                    if deprecated_version:
+                        constant_str += (
+                            '\npragma Obsolescent (%s, Message => "Deprecated since %s");\n'
+                            % (name, node.get("deprecated-version"))
+                        )
+                    else:
+                        constant_str += '\npragma Obsolescent (%s);\n' % (name)
+
+                constants.append(constant_str)
 
         constants.sort()
         section.add("\n".join(constants))
@@ -2899,7 +2951,7 @@ Package.copyright_header = \
     """------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2017, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -2925,7 +2977,7 @@ gir.ccode = \
  *               GtkAda - Ada95 binding for Gtk+/Gnome                       *
  *                                                                           *
  *   Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet           *
- *                     Copyright (C) 2000-2017, AdaCore                      *
+ *                     Copyright (C) 2000-2022, AdaCore                      *
  *                                                                           *
  * This library is free software;  you can redistribute it and/or modify it  *
  * under terms of the  GNU General Public License  as published by the Free  *
@@ -2992,8 +3044,8 @@ for the_ctype in binding:
     gir.bound.add(the_ctype)
 
 
-out = file(options.ada_outfile, "w")
-cout = file(options.c_outfile, "w")
-gir.generate(out, cout)
+with open(options.ada_outfile, "wb") as out:
+    with open(options.c_outfile, "wb") as cout:
+        gir.generate(out, cout)
 
 gir.show_unbound()

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -28,7 +28,6 @@
 --  </description>
 
 pragma Warnings (Off, "*is already use-visible*");
-with Glib;        use Glib;
 with Glib.Main;   use Glib.Main;
 with Glib.Object; use Glib.Object;
 
@@ -94,7 +93,9 @@ package Glib.Cancellable is
    --  This function is thread-safe. In other words, you can safely call it
    --  from a thread other than the one running the operation that was passed
    --  the Cancellable.
-   --  The convention within gio is that cancelling an asynchronous operation
+   --  If Cancellable is null, this function returns immediately for
+   --  convenience.
+   --  The convention within GIO is that cancelling an asynchronous operation
    --  causes it to complete asynchronously. That is, if you cancel the
    --  operation from the same thread in which it is running, then the
    --  operation's Gasync_Ready_Callback will not be invoked until the
@@ -176,9 +177,9 @@ package Glib.Cancellable is
    --  the cancellable operation is finished and the signal handler is removed.
    --  See Glib.Cancellable.Gcancellable::cancelled for details on how to use
    --  this.
-   --  If Cancellable is null or Handler_Id is %0 this function does nothing.
+   --  If Cancellable is null or Handler_Id is `0` this function does nothing.
    --  Since: gtk+ 2.22
-   --  "handler_id": Handler id of the handler to be disconnected, or %0.
+   --  "handler_id": Handler id of the handler to be disconnected, or `0`.
 
    function Get_Fd
       (Self : not null access Gcancellable_Record) return Glib.Gint;
@@ -224,6 +225,12 @@ package Glib.Cancellable is
    --  Resets Cancellable to its uncancelled state.
    --  If cancellable is currently in use by any cancellable operation then
    --  the behavior of this function is undefined.
+   --  Note that it is generally not a good idea to reuse an existing
+   --  cancellable for more operations after it has been cancelled once, as
+   --  this function might tempt you to do. The recommended practice is to drop
+   --  the reference to a cancellable after cancelling it, and let it die with
+   --  the outstanding async operations. You should create a fresh cancellable
+   --  for further async operations.
 
    function Set_Error_If_Cancelled
       (Self : not null access Gcancellable_Record) return Boolean;
@@ -239,6 +246,8 @@ package Glib.Cancellable is
    --  For convenience, you can call this with a null
    --  Glib.Cancellable.Gcancellable, in which case the source will never
    --  trigger.
+   --  The new Glib.Main.G_Source will hold a reference to the
+   --  Glib.Cancellable.Gcancellable.
    --  Since: gtk+ 2.28
 
    ---------------

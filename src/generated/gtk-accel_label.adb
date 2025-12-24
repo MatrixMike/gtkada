@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@ pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Accel_Label is
@@ -69,9 +69,9 @@ package body Gtk.Accel_Label is
        String      : UTF8_String)
    is
       function Internal
-         (String : Interfaces.C.Strings.chars_ptr) return System.Address;
+         (String : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_accel_label_new");
-      Tmp_String : Interfaces.C.Strings.chars_ptr := New_String (String);
+      Tmp_String : Gtkada.Types.Chars_Ptr := New_String (String);
       Tmp_Return : System.Address;
    begin
       if not Accel_Label.Is_Created then
@@ -180,14 +180,14 @@ package body Gtk.Accel_Label is
 
    procedure Set_Accel_Widget
       (Accel_Label  : not null access Gtk_Accel_Label_Record;
-       Accel_Widget : not null access Gtk.Widget.Gtk_Widget_Record'Class)
+       Accel_Widget : access Gtk.Widget.Gtk_Widget_Record'Class)
    is
       procedure Internal
          (Accel_Label  : System.Address;
           Accel_Widget : System.Address);
       pragma Import (C, Internal, "gtk_accel_label_set_accel_widget");
    begin
-      Internal (Get_Object (Accel_Label), Get_Object (Accel_Widget));
+      Internal (Get_Object (Accel_Label), Get_Object_Or_Null (GObject (Accel_Widget)));
    end Set_Accel_Widget;
 
 end Gtk.Accel_Label;

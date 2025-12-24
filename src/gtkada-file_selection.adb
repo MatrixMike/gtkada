@@ -2,7 +2,7 @@
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,16 +22,16 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Gtk.Main;           use Gtk.Main;
-with Gtk.Button;         use Gtk.Button;
-with Gtk.Dialog;         use Gtk.Dialog;
-with Gtk.Enums;          use Gtk.Enums;
-with Gtk.Widget;         use Gtk.Widget;
-with Gtk.File_Chooser;   use Gtk.File_Chooser;
+with GNAT.OS_Lib;               use GNAT.OS_Lib;
+with Gtk.Main;                  use Gtk.Main;
+with Gtk.Button;                use Gtk.Button;
+with Gtk.Dialog;                use Gtk.Dialog;
+with Gtk.Enums;                 use Gtk.Enums;
+with Gtk.Widget;                use Gtk.Widget;
+with Gtk.File_Chooser;          use Gtk.File_Chooser;
 with Gtk.File_Chooser_Dialog;   use Gtk.File_Chooser_Dialog;
-with Gtkada.Handlers;    use Gtkada.Handlers;
-with GNAT.OS_Lib;        use GNAT.OS_Lib;
-with Gtk.Stock;          use Gtk.Stock;
+with Gtkada.Handlers;           use Gtkada.Handlers;
+with Gtkada.Stock_Labels;       use Gtkada.Stock_Labels;
 
 package body Gtkada.File_Selection is
 
@@ -105,7 +105,11 @@ package body Gtkada.File_Selection is
       if Dir_Only then
          Action := Action_Select_Folder;
       else
-         Action := Action_Open;
+         if Must_Exist then
+            Action := Action_Open;
+         else
+            Action := Action_Save;
+         end if;
       end if;
 
       Initialize (Dialog, Title, null, Action);

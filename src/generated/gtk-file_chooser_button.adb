@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.File_Chooser_Button is
@@ -104,11 +104,11 @@ package body Gtk.File_Chooser_Button is
        Action : Gtk.File_Chooser.Gtk_File_Chooser_Action)
    is
       function Internal
-         (Title  : Interfaces.C.Strings.chars_ptr;
+         (Title  : Gtkada.Types.Chars_Ptr;
           Action : Gtk.File_Chooser.Gtk_File_Chooser_Action)
           return System.Address;
       pragma Import (C, Internal, "gtk_file_chooser_button_new");
-      Tmp_Title  : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title  : Gtkada.Types.Chars_Ptr := New_String (Title);
       Tmp_Return : System.Address;
    begin
       if not Button.Is_Created then
@@ -157,7 +157,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Button : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Button : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_button_get_title");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Button)));
@@ -203,9 +203,9 @@ package body Gtk.File_Chooser_Button is
    is
       procedure Internal
          (Button : System.Address;
-          Title  : Interfaces.C.Strings.chars_ptr);
+          Title  : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_chooser_button_set_title");
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Get_Object (Button), Tmp_Title);
       Free (Tmp_Title);
@@ -224,6 +224,36 @@ package body Gtk.File_Chooser_Button is
    begin
       Internal (Get_Object (Button), N_Chars);
    end Set_Width_Chars;
+
+   ----------------
+   -- Add_Choice --
+   ----------------
+
+   procedure Add_Choice
+      (Chooser       : not null access Gtk_File_Chooser_Button_Record;
+       Id            : UTF8_String;
+       Label         : UTF8_String;
+       Options       : GNAT.Strings.String_List;
+       Option_Labels : GNAT.Strings.String_List)
+   is
+      procedure Internal
+         (Chooser       : System.Address;
+          Id            : Gtkada.Types.Chars_Ptr;
+          Label         : Gtkada.Types.Chars_Ptr;
+          Options       : Gtkada.Types.chars_ptr_array;
+          Option_Labels : Gtkada.Types.chars_ptr_array);
+      pragma Import (C, Internal, "gtk_file_chooser_add_choice");
+      Tmp_Id            : Gtkada.Types.Chars_Ptr := New_String (Id);
+      Tmp_Label         : Gtkada.Types.Chars_Ptr := New_String (Label);
+      Tmp_Options       : Gtkada.Types.chars_ptr_array := From_String_List (Options);
+      Tmp_Option_Labels : Gtkada.Types.chars_ptr_array := From_String_List (Option_Labels);
+   begin
+      Internal (Get_Object (Chooser), Tmp_Id, Tmp_Label, Tmp_Options, Tmp_Option_Labels);
+      Gtkada.Types.Free (Tmp_Option_Labels);
+      Gtkada.Types.Free (Tmp_Options);
+      Free (Tmp_Label);
+      Free (Tmp_Id);
+   end Add_Choice;
 
    ----------------
    -- Add_Filter --
@@ -249,9 +279,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          Folder  : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Folder  : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_add_shortcut_folder");
-      Tmp_Folder : Interfaces.C.Strings.chars_ptr := New_String (Folder);
+      Tmp_Folder : Gtkada.Types.Chars_Ptr := New_String (Folder);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_Folder);
@@ -269,9 +299,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          URI     : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_add_shortcut_folder_uri");
-      Tmp_URI    : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI    : Gtkada.Types.Chars_Ptr := New_String (URI);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_URI);
@@ -294,6 +324,26 @@ package body Gtk.File_Chooser_Button is
    begin
       return Internal (Get_Object (Chooser));
    end Get_Action;
+
+   ----------------
+   -- Get_Choice --
+   ----------------
+
+   function Get_Choice
+      (Chooser : not null access Gtk_File_Chooser_Button_Record;
+       Id      : UTF8_String) return UTF8_String
+   is
+      function Internal
+         (Chooser : System.Address;
+          Id      : Gtkada.Types.Chars_Ptr) return Gtkada.Types.Chars_Ptr;
+      pragma Import (C, Internal, "gtk_file_chooser_get_choice");
+      Tmp_Id     : Gtkada.Types.Chars_Ptr := New_String (Id);
+      Tmp_Return : Gtkada.Types.Chars_Ptr;
+   begin
+      Tmp_Return := Internal (Get_Object (Chooser), Tmp_Id);
+      Free (Tmp_Id);
+      return Gtkada.Bindings.Value_Allowing_Null (Tmp_Return);
+   end Get_Choice;
 
    ------------------------
    -- Get_Create_Folders --
@@ -318,7 +368,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_current_folder");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -333,7 +383,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_current_folder_uri");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -348,7 +398,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_current_name");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -392,7 +442,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_filename");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -467,7 +517,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_preview_filename");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -482,7 +532,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_preview_uri");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -554,7 +604,7 @@ package body Gtk.File_Chooser_Button is
        return UTF8_String
    is
       function Internal
-         (Chooser : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Chooser : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_file_chooser_get_uri");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Chooser)));
@@ -639,6 +689,24 @@ package body Gtk.File_Chooser_Button is
    end List_Shortcut_Folders;
 
    -------------------
+   -- Remove_Choice --
+   -------------------
+
+   procedure Remove_Choice
+      (Chooser : not null access Gtk_File_Chooser_Button_Record;
+       Id      : UTF8_String)
+   is
+      procedure Internal
+         (Chooser : System.Address;
+          Id      : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "gtk_file_chooser_remove_choice");
+      Tmp_Id : Gtkada.Types.Chars_Ptr := New_String (Id);
+   begin
+      Internal (Get_Object (Chooser), Tmp_Id);
+      Free (Tmp_Id);
+   end Remove_Choice;
+
+   -------------------
    -- Remove_Filter --
    -------------------
 
@@ -662,9 +730,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          Folder  : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Folder  : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_remove_shortcut_folder");
-      Tmp_Folder : Interfaces.C.Strings.chars_ptr := New_String (Folder);
+      Tmp_Folder : Gtkada.Types.Chars_Ptr := New_String (Folder);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_Folder);
@@ -682,9 +750,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          URI     : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_remove_shortcut_folder_uri");
-      Tmp_URI    : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI    : Gtkada.Types.Chars_Ptr := New_String (URI);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_URI);
@@ -715,9 +783,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser  : System.Address;
-          Filename : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Filename : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_select_filename");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_Filename);
@@ -735,9 +803,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          URI     : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_select_uri");
-      Tmp_URI    : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI    : Gtkada.Types.Chars_Ptr := New_String (URI);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_URI);
@@ -760,6 +828,28 @@ package body Gtk.File_Chooser_Button is
    begin
       Internal (Get_Object (Chooser), Action);
    end Set_Action;
+
+   ----------------
+   -- Set_Choice --
+   ----------------
+
+   procedure Set_Choice
+      (Chooser : not null access Gtk_File_Chooser_Button_Record;
+       Id      : UTF8_String;
+       Option  : UTF8_String)
+   is
+      procedure Internal
+         (Chooser : System.Address;
+          Id      : Gtkada.Types.Chars_Ptr;
+          Option  : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "gtk_file_chooser_set_choice");
+      Tmp_Id     : Gtkada.Types.Chars_Ptr := New_String (Id);
+      Tmp_Option : Gtkada.Types.Chars_Ptr := New_String (Option);
+   begin
+      Internal (Get_Object (Chooser), Tmp_Id, Tmp_Option);
+      Free (Tmp_Option);
+      Free (Tmp_Id);
+   end Set_Choice;
 
    ------------------------
    -- Set_Create_Folders --
@@ -787,9 +877,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser  : System.Address;
-          Filename : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Filename : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_set_current_folder");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_Filename);
@@ -807,9 +897,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          URI     : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_set_current_folder_uri");
-      Tmp_URI    : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI    : Gtkada.Types.Chars_Ptr := New_String (URI);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_URI);
@@ -827,9 +917,9 @@ package body Gtk.File_Chooser_Button is
    is
       procedure Internal
          (Chooser : System.Address;
-          Name    : Interfaces.C.Strings.chars_ptr);
+          Name    : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_chooser_set_current_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
    begin
       Internal (Get_Object (Chooser), Tmp_Name);
       Free (Tmp_Name);
@@ -877,9 +967,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser  : System.Address;
-          Filename : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Filename : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_set_filename");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_Filename);
@@ -1005,9 +1095,9 @@ package body Gtk.File_Chooser_Button is
    is
       function Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          URI     : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_file_chooser_set_uri");
-      Tmp_URI    : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI    : Gtkada.Types.Chars_Ptr := New_String (URI);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Chooser), Tmp_URI);
@@ -1054,9 +1144,9 @@ package body Gtk.File_Chooser_Button is
    is
       procedure Internal
          (Chooser  : System.Address;
-          Filename : Interfaces.C.Strings.chars_ptr);
+          Filename : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_chooser_unselect_filename");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
    begin
       Internal (Get_Object (Chooser), Tmp_Filename);
       Free (Tmp_Filename);
@@ -1072,9 +1162,9 @@ package body Gtk.File_Chooser_Button is
    is
       procedure Internal
          (Chooser : System.Address;
-          URI     : Interfaces.C.Strings.chars_ptr);
+          URI     : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_file_chooser_unselect_uri");
-      Tmp_URI : Interfaces.C.Strings.chars_ptr := New_String (URI);
+      Tmp_URI : Gtkada.Types.Chars_Ptr := New_String (URI);
    begin
       Internal (Get_Object (Chooser), Tmp_URI);
       Free (Tmp_URI);

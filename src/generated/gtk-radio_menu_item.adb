@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Radio_Menu_Item is
@@ -121,9 +121,9 @@ package body Gtk.Radio_Menu_Item is
    is
       function Internal
          (Group : System.Address;
-          Label : Interfaces.C.Strings.chars_ptr) return System.Address;
+          Label : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_radio_menu_item_new_with_label");
-      Tmp_Label  : Interfaces.C.Strings.chars_ptr := New_String (Label);
+      Tmp_Label  : Gtkada.Types.Chars_Ptr := New_String (Label);
       Tmp_Return : System.Address;
    begin
       if not Radio_Menu_Item.Is_Created then
@@ -144,9 +144,9 @@ package body Gtk.Radio_Menu_Item is
    is
       function Internal
          (Group : System.Address;
-          Label : Interfaces.C.Strings.chars_ptr) return System.Address;
+          Label : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_radio_menu_item_new_with_mnemonic");
-      Tmp_Label  : Interfaces.C.Strings.chars_ptr := New_String (Label);
+      Tmp_Label  : Gtkada.Types.Chars_Ptr := New_String (Label);
       Tmp_Return : System.Address;
    begin
       if not Radio_Menu_Item.Is_Created then
@@ -172,6 +172,22 @@ package body Gtk.Radio_Menu_Item is
       Gtk.Widget.Widget_SList.Set_Object (Tmp_Return, Internal (Get_Object (Radio_Menu_Item)));
       return Tmp_Return;
    end Get_Group;
+
+   ----------------
+   -- Join_Group --
+   ----------------
+
+   procedure Join_Group
+      (Radio_Menu_Item : not null access Gtk_Radio_Menu_Item_Record;
+       Group_Source    : access Gtk_Radio_Menu_Item_Record'Class)
+   is
+      procedure Internal
+         (Radio_Menu_Item : System.Address;
+          Group_Source    : System.Address);
+      pragma Import (C, Internal, "gtk_radio_menu_item_join_group");
+   begin
+      Internal (Get_Object (Radio_Menu_Item), Get_Object_Or_Null (GObject (Group_Source)));
+   end Join_Group;
 
    ---------------
    -- Set_Group --
@@ -211,7 +227,7 @@ package body Gtk.Radio_Menu_Item is
       (Self : not null access Gtk_Radio_Menu_Item_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_actionable_get_action_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -265,14 +281,19 @@ package body Gtk.Radio_Menu_Item is
 
    procedure Set_Action_Name
       (Self        : not null access Gtk_Radio_Menu_Item_Record;
-       Action_Name : UTF8_String)
+       Action_Name : UTF8_String := "")
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_action_name");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr;
    begin
+      if Action_Name = "" then
+         Tmp_Action_Name := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Action_Name := New_String (Action_Name);
+      end if;
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
    end Set_Action_Name;
@@ -303,9 +324,9 @@ package body Gtk.Radio_Menu_Item is
    is
       procedure Internal
          (Self                 : System.Address;
-          Detailed_Action_Name : Interfaces.C.Strings.chars_ptr);
+          Detailed_Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_detailed_action_name");
-      Tmp_Detailed_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Detailed_Action_Name);
+      Tmp_Detailed_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Detailed_Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Detailed_Action_Name);
       Free (Tmp_Detailed_Action_Name);

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@ pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 with Ada.Unchecked_Conversion;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;     use Interfaces.C.Strings;
+with Gtkada.Types;             use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gdk.Window is
@@ -110,6 +110,9 @@ package body Gdk.Window is
    function To_Address is new Ada.Unchecked_Conversion
      (Gdk_Window_Child_Func, System.Address);
 
+   function To_Address is new Ada.Unchecked_Conversion
+     (Gdk_Window_Invalidate_Handler_Func, System.Address);
+
    function Internal_Gdk_Window_Child_Func
       (Window    : Gdk.Gdk_Window;
        User_Data : System.Address) return Glib.Gboolean;
@@ -169,6 +172,24 @@ package body Gdk.Window is
       return Self;
    end Gdk_Window_New;
 
+   ----------------------
+   -- Begin_Draw_Frame --
+   ----------------------
+
+   function Begin_Draw_Frame
+      (Self   : Gdk.Gdk_Window;
+       Region : Cairo.Region.Cairo_Region)
+       return Gdk.Drawing_Context.Gdk_Drawing_Context
+   is
+      function Internal
+         (Self   : Gdk.Gdk_Window;
+          Region : Cairo.Region.Cairo_Region) return System.Address;
+      pragma Import (C, Internal, "gdk_window_begin_draw_frame");
+      Stub_Gdk_Drawing_Context : Gdk.Drawing_Context.Gdk_Drawing_Context_Record;
+   begin
+      return Gdk.Drawing_Context.Gdk_Drawing_Context (Get_User_Data (Internal (Self, Region), Stub_Gdk_Drawing_Context));
+   end Begin_Draw_Frame;
+
    --------------------------------
    -- Begin_Move_Drag_For_Device --
    --------------------------------
@@ -218,6 +239,34 @@ package body Gdk.Window is
    begin
       Internal (Self, Edge, Get_Object (Device), Button, Root_X, Root_Y, Timestamp);
    end Begin_Resize_Drag_For_Device;
+
+   -----------------------
+   -- Create_Gl_Context --
+   -----------------------
+
+   function Create_Gl_Context
+      (Self : Gdk.Gdk_Window) return Gdk.GLContext.Gdk_GLContext
+   is
+      function Internal (Self : Gdk.Gdk_Window) return System.Address;
+      pragma Import (C, Internal, "gdk_window_create_gl_context");
+      Stub_Gdk_GLContext : Gdk.GLContext.Gdk_GLContext_Record;
+   begin
+      return Gdk.GLContext.Gdk_GLContext (Get_User_Data (Internal (Self), Stub_Gdk_GLContext));
+   end Create_Gl_Context;
+
+   --------------------
+   -- End_Draw_Frame --
+   --------------------
+
+   procedure End_Draw_Frame
+      (Self    : Gdk.Gdk_Window;
+       Context : not null access Gdk.Drawing_Context.Gdk_Drawing_Context_Record'Class)
+   is
+      procedure Internal (Self : Gdk.Gdk_Window; Context : System.Address);
+      pragma Import (C, Internal, "gdk_window_end_draw_frame");
+   begin
+      Internal (Self, Get_Object (Context));
+   end End_Draw_Frame;
 
    -------------------
    -- Ensure_Native --
@@ -451,6 +500,17 @@ package body Gdk.Window is
    begin
       return Internal (Self) /= 0;
    end Get_Modal_Hint;
+
+   ----------------------
+   -- Get_Pass_Through --
+   ----------------------
+
+   function Get_Pass_Through (Self : Gdk.Gdk_Window) return Boolean is
+      function Internal (Self : Gdk.Gdk_Window) return Glib.Gboolean;
+      pragma Import (C, Internal, "gdk_window_get_pass_through");
+   begin
+      return Internal (Self) /= 0;
+   end Get_Pass_Through;
 
    -----------------
    -- Get_Pointer --
@@ -832,12 +892,12 @@ package body Gdk.Window is
    procedure Set_Icon_Name (Self : Gdk.Gdk_Window; Name : UTF8_String := "") is
       procedure Internal
          (Self : Gdk.Gdk_Window;
-          Name : Interfaces.C.Strings.chars_ptr);
+          Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gdk_window_set_icon_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Name : Gtkada.Types.Chars_Ptr;
    begin
       if Name = "" then
-         Tmp_Name := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Name := Gtkada.Types.Null_Ptr;
       else
          Tmp_Name := New_String (Name);
       end if;
@@ -857,7 +917,7 @@ package body Gdk.Window is
       if Handler = null then
          C_Gdk_Window_Set_Invalidate_Handler (Self, System.Null_Address);
       else
-         C_Gdk_Window_Set_Invalidate_Handler (Self, Handler'Address);
+         C_Gdk_Window_Set_Invalidate_Handler (Self, To_Address (Handler));
       end if;
    end Set_Invalidate_Handler;
 
@@ -910,6 +970,22 @@ package body Gdk.Window is
       Internal (Self, Boolean'Pos (Override_Redirect));
    end Set_Override_Redirect;
 
+   ----------------------
+   -- Set_Pass_Through --
+   ----------------------
+
+   procedure Set_Pass_Through
+      (Self         : Gdk.Gdk_Window;
+       Pass_Through : Boolean)
+   is
+      procedure Internal
+         (Self         : Gdk.Gdk_Window;
+          Pass_Through : Glib.Gboolean);
+      pragma Import (C, Internal, "gdk_window_set_pass_through");
+   begin
+      Internal (Self, Boolean'Pos (Pass_Through));
+   end Set_Pass_Through;
+
    --------------
    -- Set_Role --
    --------------
@@ -917,9 +993,9 @@ package body Gdk.Window is
    procedure Set_Role (Self : Gdk.Gdk_Window; Role : UTF8_String) is
       procedure Internal
          (Self : Gdk.Gdk_Window;
-          Role : Interfaces.C.Strings.chars_ptr);
+          Role : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gdk_window_set_role");
-      Tmp_Role : Interfaces.C.Strings.chars_ptr := New_String (Role);
+      Tmp_Role : Gtkada.Types.Chars_Ptr := New_String (Role);
    begin
       Internal (Self, Tmp_Role);
       Free (Tmp_Role);
@@ -967,9 +1043,9 @@ package body Gdk.Window is
    is
       procedure Internal
          (Self       : Gdk.Gdk_Window;
-          Startup_Id : Interfaces.C.Strings.chars_ptr);
+          Startup_Id : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gdk_window_set_startup_id");
-      Tmp_Startup_Id : Interfaces.C.Strings.chars_ptr := New_String (Startup_Id);
+      Tmp_Startup_Id : Gtkada.Types.Chars_Ptr := New_String (Startup_Id);
    begin
       Internal (Self, Tmp_Startup_Id);
       Free (Tmp_Startup_Id);
@@ -1014,9 +1090,9 @@ package body Gdk.Window is
    procedure Set_Title (Self : Gdk.Gdk_Window; Title : UTF8_String) is
       procedure Internal
          (Self  : Gdk.Gdk_Window;
-          Title : Interfaces.C.Strings.chars_ptr);
+          Title : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gdk_window_set_title");
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Self, Tmp_Title);
       Free (Tmp_Title);

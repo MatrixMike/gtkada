@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
---                     Copyright (C) 2001-2018, AdaCore                     --
+--                     Copyright (C) 2001-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@
 --  </description>
 --  <group>Glib, the general-purpose library</group>
 
-with Gtkada.Types;
+with Interfaces.C.Strings;
 with Glib.GSlist;
 with Glib.Glist;
 pragma Elaborate_All (Glib.GSlist);
@@ -108,7 +108,7 @@ package Glib.Object is
    --  The default implementation assumes that the value passed in is an
    --  access value created by an allocator of the default pool, i.e. it
    --  will assume that an instance of
-   --  Unchecked_Deallocation (GObject_Record'Class, GObject)
+   --  Ada.Unchecked_Deallocation (GObject_Record'Class, GObject)
    --  can be used to deallocate the designated object.
    --  Types derived of GObject_Record can override this operation in order
    --  to cope with objects allocated on other pools or even objects allocated
@@ -290,8 +290,8 @@ package Glib.Object is
    --  GtkAda assumes the return value is used to stop signal propagation when
    --  it is true (indicating the signal has been handled).
 
-   No_Signals : constant Gtkada.Types.Chars_Ptr_Array :=
-      (1 .. 0 => Gtkada.Types.Null_Ptr);
+   No_Signals : constant Interfaces.C.Strings.chars_ptr_array :=
+      (1 .. 0 => Interfaces.C.Strings.Null_Ptr);
    Null_Parameter_Types : constant Signal_Parameter_Types (1 .. 0, 1 .. 0) :=
      (others => (others => GType_None));
    --  An empty array, used as a default parameter in Initialize_Class_Record.
@@ -300,7 +300,7 @@ package Glib.Object is
      (Ancestor     : GType;
       Class_Record : in out Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array := No_Signals;
+      Signals      : Interfaces.C.Strings.chars_ptr_array := No_Signals;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null);
@@ -308,7 +308,7 @@ package Glib.Object is
      (Ancestor     : GType;
       Class_Record : not null access Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array := No_Signals;
+      Signals      : Interfaces.C.Strings.chars_ptr_array := No_Signals;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null)
@@ -397,7 +397,7 @@ package Glib.Object is
    --   end Class_Init;
    --
    --   function Get_Type return GType is
-   --      Info : access GInterface_Info;
+   --      Info : GInterface_Info_Access;
    --   begin
    --      if Initialize_Class_Record
    --         (Ancestor     => Gtk.Button.Get_Type,
@@ -465,10 +465,12 @@ package Glib.Object is
    --  A structure that provides information to the type system which is used
    --  specifically for managing interface types.
 
+   type GInterface_Info_Access is access all GInterface_Info;
+
    procedure Add_Interface
       (Klass : Ada_GObject_Class;
        Iface : GType;
-       Info  : not null access GInterface_Info);
+       Info  : not null GInterface_Info_Access);
    --  State that Klass implements the given interface. It will need to
    --  override the inherited methods. This is low-level handling.
    --  Info should be allocated in this call, and is never freed in the

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
---                     Copyright (C) 2017-2018, AdaCore                     --
+--                     Copyright (C) 2017-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,10 +25,8 @@ with Glib.Error;
 
 with Gtk.Css_Provider;    use Gtk.Css_Provider;
 with Gtk.Enums;           use Gtk.Enums;
-with Gtk.Scrolled_Window; use Gtk.Scrolled_Window;
 with Gtk.Style_Context;   use Gtk.Style_Context;
 with Gtk.Style_Provider;
-with Gtk.Text_Buffer;     use Gtk.Text_Buffer;
 with Gtk.Text_Iter;       use Gtk.Text_Iter;
 
 package body Gtkada.Multiline_Entry is
@@ -52,7 +50,6 @@ package body Gtkada.Multiline_Entry is
    procedure Initialize
      (Mult_Entry : not null access Gtkada_Multiline_Entry_Record'Class)
    is
-      Scrolled : Gtk_Scrolled_Window;
       Provider : Gtk_Css_Provider;
       Error    : aliased Glib.Error.GError;
       Success  : Boolean;
@@ -67,12 +64,12 @@ package body Gtkada.Multiline_Entry is
    begin
       Gtk.Frame.Initialize (Mult_Entry);
 
-      Gtk_New (Scrolled);
-      Scrolled.Set_Policy (Policy_Never, Policy_Automatic);
-      Mult_Entry.Add (Scrolled);
+      Gtk_New (Mult_Entry.Scrolled);
+      Mult_Entry.Scrolled.Set_Policy (Policy_Never, Policy_Automatic);
+      Mult_Entry.Add (Mult_Entry.Scrolled);
 
       Gtk_New (Mult_Entry.Text_View);
-      Scrolled.Add (Mult_Entry.Text_View);
+      Mult_Entry.Scrolled.Add (Mult_Entry.Text_View);
 
       --  Add the '.entry' class to the multiline entry widget so that it
       --  inherits the default style of entries.
@@ -130,5 +127,28 @@ package body Gtkada.Multiline_Entry is
    begin
       Buffer.Set_Text (Text);
    end Set_Text;
+
+   ----------------
+   -- Get_Buffer --
+   ----------------
+
+   function Get_Buffer
+     (Mult_Entry : not null access Gtkada_Multiline_Entry_Record)
+      return Gtk_Text_Buffer is
+   begin
+      return Mult_Entry.Text_View.Get_Buffer;
+   end Get_Buffer;
+
+   -------------------------
+   -- Get_Scrolled_Window --
+   -------------------------
+
+   function Get_Scrolled_Window
+     (Mult_Entry : not null access Gtkada_Multiline_Entry_Record)
+      return Gtk_Scrolled_Window
+   is
+   begin
+      return Mult_Entry.Scrolled;
+   end Get_Scrolled_Window;
 
 end Gtkada.Multiline_Entry;

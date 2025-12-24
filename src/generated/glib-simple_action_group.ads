@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -30,7 +30,6 @@
 
 pragma Warnings (Off, "*is already use-visible*");
 with GNAT.Strings;      use GNAT.Strings;
-with Glib;              use Glib;
 with Glib.Action;       use Glib.Action;
 with Glib.Action_Group; use Glib.Action_Group;
 with Glib.Action_Map;   use Glib.Action_Map;

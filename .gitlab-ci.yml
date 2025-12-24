@@ -1,0 +1,32 @@
+stages:
+  - build
+
+issue-check:
+  services:
+    - image:e3
+  stage: build
+  interruptible: true  # Cancel job if the branch is pushed
+  variables: # do not checkout the git repository, not needed
+    GIT_STRATEGY: none
+  rules: # Launch only on merge requests
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  script:
+    - require_issue # launch the verification
+
+build:
+  services:
+     - image:gtk-deps
+     - cpu:8
+     - mem:16
+  stage: build
+  interruptible: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'pipeline'
+
+  script:
+    - generic_anod_ci
+    - . /tmp/ci_env.sh
+
+    # Build
+    - anod build gtkada

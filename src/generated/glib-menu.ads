@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -34,7 +34,6 @@
 --  </description>
 
 pragma Warnings (Off, "*is already use-visible*");
-with Glib;            use Glib;
 with Glib.G_Icon;     use Glib.G_Icon;
 with Glib.Menu_Model; use Glib.Menu_Model;
 with Glib.Object;     use Glib.Object;

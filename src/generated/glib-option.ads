@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,12 +29,11 @@
 --  </description>
 
 pragma Warnings (Off, "*is already use-visible*");
-with Glib;                    use Glib;
 with Glib.Application;        use Glib.Application;
 with Glib.Error;              use Glib.Error;
 with Glib.Generic_Properties; use Glib.Generic_Properties;
 with Gtkada.Bindings;         use Gtkada.Bindings;
-with Interfaces.C.Strings;    use Interfaces.C.Strings;
+with Gtkada.Types;            use Gtkada.Types;
 
 package Glib.Option is
 
@@ -94,13 +93,13 @@ package Glib.Option is
    --  application can then add to its Glib.Option.Goption_Context.
 
    type GOption_Entry is record
-      Long_Name : Interfaces.C.Strings.chars_ptr;
+      Long_Name : Gtkada.Types.Chars_Ptr;
       Short_Name : Gchar;
       Flags : GOption_Flags;
       Arg : GOption_Arg;
       Arg_Data : System.Address := System.Null_Address;
-      Description : Interfaces.C.Strings.chars_ptr;
-      Arg_Description : Interfaces.C.Strings.chars_ptr;
+      Description : Gtkada.Types.Chars_Ptr;
+      Arg_Description : Gtkada.Types.Chars_Ptr;
    end record;
    pragma Convention (C, GOption_Entry);
 
@@ -373,8 +372,8 @@ private
 
 
    Null_GOption_Entry : constant GOption_Entry :=
-                          (ICS.Null_Ptr, Gchar(ASCII.NUL),
+                          (Gtkada.Types.Null_Ptr, Gchar(ASCII.NUL),
                            0, G_Option_Arg_None, System.Null_Address,
-                           ICS.Null_Ptr, ICS.Null_Ptr);
+                           Gtkada.Types.Null_Ptr, Gtkada.Types.Null_Ptr);
        
 end Glib.Option;

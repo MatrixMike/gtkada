@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@ pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 with Ada.Unchecked_Conversion;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;     use Interfaces.C.Strings;
+with Gtkada.Types;             use Gtkada.Types;
 pragma Warnings(On);
 
 package body Pango.Attributes is
@@ -36,6 +36,16 @@ package body Pango.Attributes is
       Glib.g_free (B.all'Address);
       return Result;
    end From_Object_Free;
+
+   function Convert (R : Pango.Attributes.Pango_Attribute) return System.Address is
+   begin
+      return Glib.To_Address (Glib.C_Proxy (R));
+   end Convert;
+
+   function Convert (R : System.Address) return Pango.Attributes.Pango_Attribute is
+   begin
+      return Pango.Attributes.Pango_Attribute(Glib.C_Proxy'(Glib.To_Proxy (R)));
+   end Convert;
 
    function From_Object_Free
      (B : access Pango_Attr_List'Class) return Pango_Attr_List
@@ -234,15 +244,35 @@ package body Pango.Attributes is
       Internal (Get_Object (Self));
    end Unref;
 
+   ------------
+   -- Update --
+   ------------
+
+   procedure Update
+      (Self   : Pango_Attr_List;
+       Pos    : Glib.Gint;
+       Remove : Glib.Gint;
+       Add    : Glib.Gint)
+   is
+      procedure Internal
+         (Self   : System.Address;
+          Pos    : Glib.Gint;
+          Remove : Glib.Gint;
+          Add    : Glib.Gint);
+      pragma Import (C, Internal, "pango_attr_list_update");
+   begin
+      Internal (Get_Object (Self), Pos, Remove, Add);
+   end Update;
+
    ---------------------
    -- Attr_Family_New --
    ---------------------
 
    function Attr_Family_New (Family : UTF8_String) return Pango_Attribute is
       function Internal
-         (Family : Interfaces.C.Strings.chars_ptr) return Pango_Attribute;
+         (Family : Gtkada.Types.Chars_Ptr) return Pango_Attribute;
       pragma Import (C, Internal, "pango_attr_family_new");
-      Tmp_Family : Interfaces.C.Strings.chars_ptr := New_String (Family);
+      Tmp_Family : Gtkada.Types.Chars_Ptr := New_String (Family);
       Tmp_Return : Pango_Attribute;
    begin
       Tmp_Return := Internal (Tmp_Family);

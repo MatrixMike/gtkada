@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,10 +27,9 @@ with Ada.Unchecked_Conversion;
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
-with GtkAda.Types;               use GtkAda.Types;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Application is
@@ -78,16 +77,16 @@ package body Gtk.Application is
        Flags          : Glib.Application.GApplication_Flags)
    is
       function Internal
-         (Application_Id : Interfaces.C.Strings.chars_ptr;
+         (Application_Id : Gtkada.Types.Chars_Ptr;
           Flags          : Glib.Application.GApplication_Flags)
           return System.Address;
       pragma Import (C, Internal, "gtk_application_new");
-      Tmp_Application_Id : Interfaces.C.Strings.chars_ptr;
+      Tmp_Application_Id : Gtkada.Types.Chars_Ptr;
       Tmp_Return         : System.Address;
    begin
       if not Self.Is_Created then
          if Application_Id = "" then
-            Tmp_Application_Id := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Application_Id := Gtkada.Types.Null_Ptr;
          else
             Tmp_Application_Id := New_String (Application_Id);
          end if;
@@ -109,12 +108,12 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Accelerator : Interfaces.C.Strings.chars_ptr;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Accelerator : Gtkada.Types.Chars_Ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Parameter   : System.Address);
       pragma Import (C, Internal, "gtk_application_add_accelerator");
-      Tmp_Accelerator : Interfaces.C.Strings.chars_ptr := New_String (Accelerator);
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Accelerator : Gtkada.Types.Chars_Ptr := New_String (Accelerator);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Accelerator, Tmp_Action_Name, Get_Object (Parameter));
       Free (Tmp_Action_Name);
@@ -145,10 +144,10 @@ package body Gtk.Application is
    is
       function Internal
          (Self                 : System.Address;
-          Detailed_Action_Name : Interfaces.C.Strings.chars_ptr)
+          Detailed_Action_Name : Gtkada.Types.Chars_Ptr)
           return chars_ptr_array_access;
       pragma Import (C, Internal, "gtk_application_get_accels_for_action");
-      Tmp_Detailed_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Detailed_Action_Name);
+      Tmp_Detailed_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Detailed_Action_Name);
       Tmp_Return               : chars_ptr_array_access;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Detailed_Action_Name);
@@ -166,10 +165,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self  : System.Address;
-          Accel : Interfaces.C.Strings.chars_ptr)
-          return chars_ptr_array_access;
+          Accel : Gtkada.Types.Chars_Ptr) return chars_ptr_array_access;
       pragma Import (C, Internal, "gtk_application_get_actions_for_accel");
-      Tmp_Accel  : Interfaces.C.Strings.chars_ptr := New_String (Accel);
+      Tmp_Accel  : Gtkada.Types.Chars_Ptr := New_String (Accel);
       Tmp_Return : chars_ptr_array_access;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Accel);
@@ -217,9 +215,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self : System.Address;
-          Id   : Interfaces.C.Strings.chars_ptr) return System.Address;
+          Id   : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_application_get_menu_by_id");
-      Tmp_Id     : Interfaces.C.Strings.chars_ptr := New_String (Id);
+      Tmp_Id     : Gtkada.Types.Chars_Ptr := New_String (Id);
       Stub_Gmenu : Glib.Menu.Gmenu_Record;
       Tmp_Return : System.Address;
    begin
@@ -290,13 +288,13 @@ package body Gtk.Application is
          (Self   : System.Address;
           Window : System.Address;
           Flags  : Gtk_Application_Inhibit_Flags;
-          Reason : Interfaces.C.Strings.chars_ptr) return Guint;
+          Reason : Gtkada.Types.Chars_Ptr) return Guint;
       pragma Import (C, Internal, "gtk_application_inhibit");
-      Tmp_Reason : Interfaces.C.Strings.chars_ptr;
+      Tmp_Reason : Gtkada.Types.Chars_Ptr;
       Tmp_Return : Guint;
    begin
       if Reason = "" then
-         Tmp_Reason := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Reason := Gtkada.Types.Null_Ptr;
       else
          Tmp_Reason := New_String (Reason);
       end if;
@@ -360,10 +358,10 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Parameter   : System.Address);
       pragma Import (C, Internal, "gtk_application_remove_accelerator");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Parameter));
       Free (Tmp_Action_Name);
@@ -394,14 +392,14 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self                 : System.Address;
-          Detailed_Action_Name : Interfaces.C.Strings.chars_ptr;
-          Accels               : Interfaces.C.Strings.chars_ptr_array);
+          Detailed_Action_Name : Gtkada.Types.Chars_Ptr;
+          Accels               : Gtkada.Types.chars_ptr_array);
       pragma Import (C, Internal, "gtk_application_set_accels_for_action");
-      Tmp_Detailed_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Detailed_Action_Name);
-      Tmp_Accels               : Interfaces.C.Strings.chars_ptr_array := From_String_List (Accels);
+      Tmp_Detailed_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Detailed_Action_Name);
+      Tmp_Accels               : Gtkada.Types.chars_ptr_array := From_String_List (Accels);
    begin
       Internal (Get_Object (Self), Tmp_Detailed_Action_Name, Tmp_Accels);
-      GtkAda.Types.Free (Tmp_Accels);
+      Gtkada.Types.Free (Tmp_Accels);
       Free (Tmp_Detailed_Action_Name);
    end Set_Accels_For_Action;
 
@@ -457,9 +455,9 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_added");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -476,10 +474,10 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Enabled     : Glib.Gboolean);
       pragma Import (C, Internal, "g_action_group_action_enabled_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Boolean'Pos (Enabled));
       Free (Tmp_Action_Name);
@@ -495,9 +493,9 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_removed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -514,10 +512,10 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           State       : System.Address);
       pragma Import (C, Internal, "g_action_group_action_state_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (State));
       Free (Tmp_Action_Name);
@@ -534,10 +532,10 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Parameter   : System.Address);
       pragma Import (C, Internal, "g_action_group_activate_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Parameter));
       Free (Tmp_Action_Name);
@@ -589,10 +587,10 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Value       : System.Address);
       pragma Import (C, Internal, "g_action_group_change_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Value));
       Free (Tmp_Action_Name);
@@ -608,9 +606,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_get_action_enabled");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -628,10 +626,10 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_parameter_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -649,10 +647,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -670,10 +667,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state_hint");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -691,10 +687,10 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_state_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -712,9 +708,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_has_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -747,10 +743,9 @@ package body Gtk.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return Glib.Action.Gaction;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Action.Gaction;
       pragma Import (C, Internal, "g_action_map_lookup_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Action.Gaction;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -773,7 +768,7 @@ package body Gtk.Application is
    is
       function Internal
          (Self               : System.Address;
-          Action_Name        : Interfaces.C.Strings.chars_ptr;
+          Action_Name        : Gtkada.Types.Chars_Ptr;
           Acc_Enabled        : access Glib.Gboolean;
           Acc_Parameter_Type : access Glib.Variant.Gvariant_Type;
           Acc_State_Type     : access Glib.Variant.Gvariant_Type;
@@ -785,7 +780,7 @@ package body Gtk.Application is
       Acc_State_Type     : aliased Glib.Variant.Gvariant_Type;
       Acc_State_Hint     : aliased Glib.Variant.Gvariant;
       Acc_State          : aliased Glib.Variant.Gvariant;
-      Tmp_Action_Name    : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name    : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Acc_Enabled    : aliased Glib.Gboolean;
       Tmp_Acc_State_Hint : aliased System.Address;
       Tmp_Acc_State      : aliased System.Address;
@@ -822,15 +817,25 @@ package body Gtk.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_map_remove_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
    end Remove_Action;
 
    use type System.Address;
+
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_Gtk_Application_Void, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_Gtk_Application_Void);
+
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_GObject_Void, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_GObject_Void);
 
    function Cb_To_Address is new Ada.Unchecked_Conversion
      (Cb_Gtk_Application_Gtk_Window_Void, System.Address);
@@ -845,8 +850,21 @@ package body Gtk.Application is
    procedure Connect
       (Object  : access Gtk_Application_Record'Class;
        C_Name  : Glib.Signal_Name;
+       Handler : Cb_Gtk_Application_Void;
+       After   : Boolean);
+
+   procedure Connect
+      (Object  : access Gtk_Application_Record'Class;
+       C_Name  : Glib.Signal_Name;
        Handler : Cb_Gtk_Application_Gtk_Window_Void;
        After   : Boolean);
+
+   procedure Connect_Slot
+      (Object  : access Gtk_Application_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_GObject_Void;
+       After   : Boolean;
+       Slot    : access Glib.Object.GObject_Record'Class := null);
 
    procedure Connect_Slot
       (Object  : access Gtk_Application_Record'Class;
@@ -864,6 +882,15 @@ package body Gtk.Application is
        User_Data       : System.Address);
    pragma Convention (C, Marsh_GObject_Gtk_Window_Void);
 
+   procedure Marsh_GObject_Void
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address);
+   pragma Convention (C, Marsh_GObject_Void);
+
    procedure Marsh_Gtk_Application_Gtk_Window_Void
       (Closure         : GClosure;
        Return_Value    : Glib.Values.GValue;
@@ -872,6 +899,34 @@ package body Gtk.Application is
        Invocation_Hint : System.Address;
        User_Data       : System.Address);
    pragma Convention (C, Marsh_Gtk_Application_Gtk_Window_Void);
+
+   procedure Marsh_Gtk_Application_Void
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address);
+   pragma Convention (C, Marsh_Gtk_Application_Void);
+
+   -------------
+   -- Connect --
+   -------------
+
+   procedure Connect
+      (Object  : access Gtk_Application_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_Gtk_Application_Void;
+       After   : Boolean)
+   is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_Gtk_Application_Void'Access,
+         Handler     => Cb_To_Address (Handler),--  Set in the closure
+         After       => After);
+   end Connect;
 
    -------------
    -- Connect --
@@ -891,6 +946,27 @@ package body Gtk.Application is
          Handler     => Cb_To_Address (Handler),--  Set in the closure
          After       => After);
    end Connect;
+
+   ------------------
+   -- Connect_Slot --
+   ------------------
+
+   procedure Connect_Slot
+      (Object  : access Gtk_Application_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_GObject_Void;
+       After   : Boolean;
+       Slot    : access Glib.Object.GObject_Record'Class := null)
+   is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_GObject_Void'Access,
+         Handler     => Cb_To_Address (Handler),--  Set in the closure
+         Slot_Object => Slot,
+         After       => After);
+   end Connect_Slot;
 
    ------------------
    -- Connect_Slot --
@@ -933,6 +1009,26 @@ package body Gtk.Application is
       exception when E : others => Process_Exception (E);
    end Marsh_GObject_Gtk_Window_Void;
 
+   ------------------------
+   -- Marsh_GObject_Void --
+   ------------------------
+
+   procedure Marsh_GObject_Void
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address)
+   is
+      pragma Unreferenced (Return_Value, N_Params, Params, Invocation_Hint, User_Data);
+      H   : constant Cb_GObject_Void := Address_To_Cb (Get_Callback (Closure));
+      Obj : constant Glib.Object.GObject := Glib.Object.Convert (Get_Data (Closure));
+   begin
+      H (Obj);
+      exception when E : others => Process_Exception (E);
+   end Marsh_GObject_Void;
+
    -------------------------------------------
    -- Marsh_Gtk_Application_Gtk_Window_Void --
    -------------------------------------------
@@ -952,6 +1048,53 @@ package body Gtk.Application is
       H (Obj, Gtk.Window.Gtk_Window (Unchecked_To_Object (Params, 1)));
       exception when E : others => Process_Exception (E);
    end Marsh_Gtk_Application_Gtk_Window_Void;
+
+   --------------------------------
+   -- Marsh_Gtk_Application_Void --
+   --------------------------------
+
+   procedure Marsh_Gtk_Application_Void
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address)
+   is
+      pragma Unreferenced (Return_Value, N_Params, Invocation_Hint, User_Data);
+      H   : constant Cb_Gtk_Application_Void := Address_To_Cb (Get_Callback (Closure));
+      Obj : constant Gtk_Application := Gtk_Application (Unchecked_To_Object (Params, 0));
+   begin
+      H (Obj);
+      exception when E : others => Process_Exception (E);
+   end Marsh_Gtk_Application_Void;
+
+   ------------------
+   -- On_Query_End --
+   ------------------
+
+   procedure On_Query_End
+      (Self  : not null access Gtk_Application_Record;
+       Call  : Cb_Gtk_Application_Void;
+       After : Boolean := False)
+   is
+   begin
+      Connect (Self, "query-end" & ASCII.NUL, Call, After);
+   end On_Query_End;
+
+   ------------------
+   -- On_Query_End --
+   ------------------
+
+   procedure On_Query_End
+      (Self  : not null access Gtk_Application_Record;
+       Call  : Cb_GObject_Void;
+       Slot  : not null access Glib.Object.GObject_Record'Class;
+       After : Boolean := False)
+   is
+   begin
+      Connect_Slot (Self, "query-end" & ASCII.NUL, Call, After, Slot);
+   end On_Query_End;
 
    ---------------------
    -- On_Window_Added --

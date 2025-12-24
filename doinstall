@@ -1,5 +1,7 @@
 #!/bin/sh
 
+current_dir="`/bin/pwd`"
+
 begin_message() {
    clear
    cat <<EOF
@@ -15,8 +17,6 @@ EOF
    read x
 }
 
-current_dir="`/bin/pwd`"
-
 # Checks for the presence of a Gtk+ binary package in gtk-bin/
 check_gtk_bin() {
    gtk_bin_dir="`pwd`/gtk-bin"
@@ -30,25 +30,11 @@ check_gtk_bin() {
 ## Sets the variable  $basedir
 ask_basedir() {
    clear
-   default_dir="`type gnatmake 2>/dev/null| cut -d' ' -f3`"
-   default_dir="`dirname \"$default_dir\" 2>/dev/null`"
-
-   if [ "$default_dir" != "" -a "$default_dir" != "." -a "$default_dir" != "/usr/bin" ]; then
-      default_dir="`cd "$default_dir/.."; pwd`"
-      cat <<EOF
-
-  GNAT has been found in $default_dir.
-  Do you want to install GtkAda there too? Hit RETURN if yes or enter
-  the name of the directory in which GtkAda should be installed:
-
-EOF
-   else
-     default_dir=/opt/gtkada
-     cat <<EOF
+   default_dir=/opt/gtkada
+   cat <<EOF
   Enter the name of the directory in which you would like to install GtkAda
 
 EOF
-   fi
 
    while [ "$basedir" = "" ]; do
       printf "[$default_dir] "
@@ -119,13 +105,27 @@ install_binaries() {
 
   echo "Copying the Gtk+ binaries"
 
-  cp -r "$gtk_bin_dir"/* "$basedir"
+  cp -ri "$gtk_bin_dir"/* "$basedir"
 
   echo "Setting up the environment"
   eval `"$basedir"/bin/gtkada-env.sh --print-only`
 
+  # Update gdkpixbuf loaders cache
+
+  LD_LIBRARY_PATH=$basedir/lib:$LD_LIBRARY_PATH \
+  GDK_PIXBUF_MODULE_FILE=$basedir/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache \
+  GDK_PIXBUF_MODULEDIR=$basedir/lib/gdk-pixbuf-2.0/2.10.0/loaders \
+  $basedir/bin/gdk-pixbuf-query-loaders --update-cache
+
+  # Update immodules cache
+
+  LD_LIBRARY_PATH=$basedir/lib:$LD_LIBRARY_PATH \
+  GTK_IM_MODULE_FILE=$basedir/lib/gtk-3.0/3.0.0/immodules.cache \
+  GTK_PATH=$basedir/lib/gtk-3.0 \
+  $basedir/bin/gtk-query-immodules-3.0 --update-cache
+
   echo "Compiling GtkAda"
-  ./configure --prefix="$basedir" --with-GL=no && make all install 2>&1 | \
+  ./configure --prefix="$basedir" && make all install 2>&1 | \
      tee install.log
 
   # Test for the presence of a gtkada.gpr as check that the install succeeded
@@ -153,6 +153,27 @@ EOF
 }
 
 ## Main program
+
+if [ $# -eq 1 ]; then
+  if [ "$1" = "--help" ]; then
+    printf "
+   Usage: $0 [install_dir]
+
+   When no argument is specified, runs the GtkAda installer
+   interactively, otherwise installs automatically under install_dir.
+"
+  else
+    echo "installing GtkAda under $1"
+    check_gtk_bin
+    basedir="$1"
+    mkdir -p $basedir || exit 1
+    install_binaries
+    end_message
+  fi
+  exit 0
+fi
+
+# Perform interactive install
 
 check_gtk_bin
 begin_message

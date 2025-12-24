@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,7 +26,7 @@ pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.IM_Multi_Context is
@@ -94,7 +94,7 @@ package body Gtk.IM_Multi_Context is
        return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_im_multicontext_get_context_id");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -110,9 +110,9 @@ package body Gtk.IM_Multi_Context is
    is
       procedure Internal
          (Self       : System.Address;
-          Context_Id : Interfaces.C.Strings.chars_ptr);
+          Context_Id : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_im_multicontext_set_context_id");
-      Tmp_Context_Id : Interfaces.C.Strings.chars_ptr := New_String (Context_Id);
+      Tmp_Context_Id : Gtkada.Types.Chars_Ptr := New_String (Context_Id);
    begin
       Internal (Get_Object (Self), Tmp_Context_Id);
       Free (Tmp_Context_Id);

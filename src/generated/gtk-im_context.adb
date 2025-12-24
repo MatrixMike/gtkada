@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.IM_Context is
@@ -147,11 +147,11 @@ package body Gtk.IM_Context is
    is
       procedure Internal
          (Self         : System.Address;
-          Text         : Interfaces.C.Strings.chars_ptr;
+          Text         : Gtkada.Types.Chars_Ptr;
           Len          : Glib.Gint;
           Cursor_Index : Glib.Gint);
       pragma Import (C, Internal, "gtk_im_context_set_surrounding");
-      Tmp_Text : Interfaces.C.Strings.chars_ptr := New_String (Text);
+      Tmp_Text : Gtkada.Types.Chars_Ptr := New_String (Text);
    begin
       Internal (Get_Object (Self), Tmp_Text, Len, Cursor_Index);
       Free (Tmp_Text);

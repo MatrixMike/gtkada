@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Label is
@@ -93,15 +93,14 @@ package body Gtk.Label is
       (Label : not null access Gtk_Label_Record'Class;
        Str   : UTF8_String := "")
    is
-      function Internal
-         (Str : Interfaces.C.Strings.chars_ptr) return System.Address;
+      function Internal (Str : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_label_new");
-      Tmp_Str    : Interfaces.C.Strings.chars_ptr;
+      Tmp_Str    : Gtkada.Types.Chars_Ptr;
       Tmp_Return : System.Address;
    begin
       if not Label.Is_Created then
          if Str = "" then
-            Tmp_Str := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Str := Gtkada.Types.Null_Ptr;
          else
             Tmp_Str := New_String (Str);
          end if;
@@ -119,15 +118,14 @@ package body Gtk.Label is
       (Label : not null access Gtk_Label_Record'Class;
        Str   : UTF8_String := "")
    is
-      function Internal
-         (Str : Interfaces.C.Strings.chars_ptr) return System.Address;
+      function Internal (Str : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_label_new_with_mnemonic");
-      Tmp_Str    : Interfaces.C.Strings.chars_ptr;
+      Tmp_Str    : Gtkada.Types.Chars_Ptr;
       Tmp_Return : System.Address;
    begin
       if not Label.Is_Created then
          if Str = "" then
-            Tmp_Str := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Str := Gtkada.Types.Null_Ptr;
          else
             Tmp_Str := New_String (Str);
          end if;
@@ -172,7 +170,7 @@ package body Gtk.Label is
       (Label : not null access Gtk_Label_Record) return UTF8_String
    is
       function Internal
-         (Label : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Label : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_label_get_current_uri");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Label)));
@@ -216,7 +214,7 @@ package body Gtk.Label is
       (Label : not null access Gtk_Label_Record) return UTF8_String
    is
       function Internal
-         (Label : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Label : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_label_get_label");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Label)));
@@ -396,7 +394,7 @@ package body Gtk.Label is
       (Label : not null access Gtk_Label_Record) return UTF8_String
    is
       function Internal
-         (Label : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Label : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_label_get_text");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Label)));
@@ -453,6 +451,32 @@ package body Gtk.Label is
    begin
       return Internal (Get_Object (Label));
    end Get_Width_Chars;
+
+   ----------------
+   -- Get_Xalign --
+   ----------------
+
+   function Get_Xalign
+      (Label : not null access Gtk_Label_Record) return Gfloat
+   is
+      function Internal (Label : System.Address) return Gfloat;
+      pragma Import (C, Internal, "gtk_label_get_xalign");
+   begin
+      return Internal (Get_Object (Label));
+   end Get_Xalign;
+
+   ----------------
+   -- Get_Yalign --
+   ----------------
+
+   function Get_Yalign
+      (Label : not null access Gtk_Label_Record) return Gfloat
+   is
+      function Internal (Label : System.Address) return Gfloat;
+      pragma Import (C, Internal, "gtk_label_get_yalign");
+   begin
+      return Internal (Get_Object (Label));
+   end Get_Yalign;
 
    -------------------
    -- Select_Region --
@@ -542,9 +566,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label : System.Address;
-          Str   : Interfaces.C.Strings.chars_ptr);
+          Str   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_label");
-      Tmp_Str : Interfaces.C.Strings.chars_ptr := New_String (Str);
+      Tmp_Str : Gtkada.Types.Chars_Ptr := New_String (Str);
    begin
       Internal (Get_Object (Label), Tmp_Str);
       Free (Tmp_Str);
@@ -604,9 +628,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label : System.Address;
-          Str   : Interfaces.C.Strings.chars_ptr);
+          Str   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_markup");
-      Tmp_Str : Interfaces.C.Strings.chars_ptr := New_String (Str);
+      Tmp_Str : Gtkada.Types.Chars_Ptr := New_String (Str);
    begin
       Internal (Get_Object (Label), Tmp_Str);
       Free (Tmp_Str);
@@ -622,9 +646,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label : System.Address;
-          Str   : Interfaces.C.Strings.chars_ptr);
+          Str   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_markup_with_mnemonic");
-      Tmp_Str : Interfaces.C.Strings.chars_ptr := New_String (Str);
+      Tmp_Str : Gtkada.Types.Chars_Ptr := New_String (Str);
    begin
       Internal (Get_Object (Label), Tmp_Str);
       Free (Tmp_Str);
@@ -668,9 +692,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label   : System.Address;
-          Pattern : Interfaces.C.Strings.chars_ptr);
+          Pattern : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_pattern");
-      Tmp_Pattern : Interfaces.C.Strings.chars_ptr := New_String (Pattern);
+      Tmp_Pattern : Gtkada.Types.Chars_Ptr := New_String (Pattern);
    begin
       Internal (Get_Object (Label), Tmp_Pattern);
       Free (Tmp_Pattern);
@@ -716,9 +740,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label : System.Address;
-          Str   : Interfaces.C.Strings.chars_ptr);
+          Str   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_text");
-      Tmp_Str : Interfaces.C.Strings.chars_ptr := New_String (Str);
+      Tmp_Str : Gtkada.Types.Chars_Ptr := New_String (Str);
    begin
       Internal (Get_Object (Label), Tmp_Str);
       Free (Tmp_Str);
@@ -734,9 +758,9 @@ package body Gtk.Label is
    is
       procedure Internal
          (Label : System.Address;
-          Str   : Interfaces.C.Strings.chars_ptr);
+          Str   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_label_set_text_with_mnemonic");
-      Tmp_Str : Interfaces.C.Strings.chars_ptr := New_String (Str);
+      Tmp_Str : Gtkada.Types.Chars_Ptr := New_String (Str);
    begin
       Internal (Get_Object (Label), Tmp_Str);
       Free (Tmp_Str);
@@ -799,6 +823,34 @@ package body Gtk.Label is
    begin
       Internal (Get_Object (Label), N_Chars);
    end Set_Width_Chars;
+
+   ----------------
+   -- Set_Xalign --
+   ----------------
+
+   procedure Set_Xalign
+      (Label  : not null access Gtk_Label_Record;
+       Xalign : Gfloat)
+   is
+      procedure Internal (Label : System.Address; Xalign : Gfloat);
+      pragma Import (C, Internal, "gtk_label_set_xalign");
+   begin
+      Internal (Get_Object (Label), Xalign);
+   end Set_Xalign;
+
+   ----------------
+   -- Set_Yalign --
+   ----------------
+
+   procedure Set_Yalign
+      (Label  : not null access Gtk_Label_Record;
+       Yalign : Gfloat)
+   is
+      procedure Internal (Label : System.Address; Yalign : Gfloat);
+      pragma Import (C, Internal, "gtk_label_set_yalign");
+   begin
+      Internal (Get_Object (Label), Yalign);
+   end Set_Yalign;
 
    use type System.Address;
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -32,16 +32,16 @@
 --  </description>
 
 pragma Warnings (Off, "*is already use-visible*");
-with Gdk.Types;            use Gdk.Types;
-with Glib;                 use Glib;
-with Glib.Object;          use Glib.Object;
-with Gtk.Enums;            use Gtk.Enums;
-with Interfaces.C.Strings; use Interfaces.C.Strings;
+with Gdk.Types;    use Gdk.Types;
+with Glib;         use Glib;
+with Glib.Object;  use Glib.Object;
+with Gtk.Enums;    use Gtk.Enums;
+with Gtkada.Types; use Gtkada.Types;
 
 package Gtk.Binding_Set is
 
    type Gtk_Binding_Set is record
-      Set_Name : Interfaces.C.Strings.chars_ptr;
+      Set_Name : Gtkada.Types.Chars_Ptr;
       Priority : Glib.Gint := 0;
       Widget_Path_Pspecs : System.Address := System.Null_Address;
       Widget_Class_Pspecs : System.Address := System.Null_Address;

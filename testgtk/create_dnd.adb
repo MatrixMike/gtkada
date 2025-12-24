@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --               GtkAda - Ada95 binding for the Gimp Toolkit                --
 --                                                                          --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -45,8 +45,8 @@ with Gtk.Selection_Data; use Gtk.Selection_Data;
 
 package body Create_Dnd is
 
-   function "+" (S : String) return Interfaces.C.Strings.chars_ptr
-                renames Interfaces.C.Strings.New_String;
+   function "+" (S : String) return Gtkada.Types.Chars_Ptr
+                renames Gtkada.Types.New_String;
 
    Drag_Icon_Xpm : constant Gtkada.Types.Chars_Ptr_Array
      := "36 48 9 1"
@@ -623,6 +623,21 @@ package body Create_Dnd is
       Put_Log ("Delete the data!");
    end Source_Drag_Data_Delete;
 
+   -----------------
+   -- Drag_Failed --
+   -----------------
+   --  Called in reaction to the "drag-failed" event.
+
+   function Drag_Failed
+     (Widget  : access Gtk.Widget.Gtk_Widget_Record'Class;
+      Args    : Glib.Values.GValues) return Boolean is
+   begin
+      Put_Log ("Drag_Failed");
+      --  Returning True here means canceling the animation where the
+      --  drag icon goes back to the originating widget.
+      return True;
+   end Drag_Failed;
+
    ---------
    -- Run --
    ---------
@@ -706,6 +721,8 @@ package body Create_Dnd is
                                Source_Drag_Data_Get'Access);
       Widget_Callback.Connect (Button, "drag_data_delete",
                                Source_Drag_Data_Delete'Access);
+      Return_Callback.Connect (Button, "drag-failed",
+                               Drag_Failed'Access);
 
       Gtk.Dnd.Source_Set_Icon_Pixbuf (Button, Drag_Icon);
 

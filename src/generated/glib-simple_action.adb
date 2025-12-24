@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -28,9 +28,7 @@ with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
-pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
-pragma Warnings(On);
+with Gtkada.Types;               use Gtkada.Types;
 
 package body Glib.Simple_Action is
 
@@ -106,10 +104,10 @@ package body Glib.Simple_Action is
        Parameter_Type : Glib.Variant.Gvariant_Type)
    is
       function Internal
-         (Name           : Interfaces.C.Strings.chars_ptr;
+         (Name           : Gtkada.Types.Chars_Ptr;
           Parameter_Type : Glib.Variant.Gvariant_Type) return System.Address;
       pragma Import (C, Internal, "g_simple_action_new");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
       Tmp_Return : System.Address;
    begin
       if not Self.Is_Created then
@@ -130,11 +128,11 @@ package body Glib.Simple_Action is
        State          : Glib.Variant.Gvariant)
    is
       function Internal
-         (Name           : Interfaces.C.Strings.chars_ptr;
+         (Name           : Gtkada.Types.Chars_Ptr;
           Parameter_Type : Glib.Variant.Gvariant_Type;
           State          : System.Address) return System.Address;
       pragma Import (C, Internal, "g_simple_action_new_stateful");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
       Tmp_Return : System.Address;
    begin
       if not Self.Is_Created then
@@ -171,6 +169,22 @@ package body Glib.Simple_Action is
    begin
       Internal (Get_Object (Self), Get_Object (Value));
    end Set_State;
+
+   --------------------
+   -- Set_State_Hint --
+   --------------------
+
+   procedure Set_State_Hint
+      (Self       : not null access Gsimple_Action_Record;
+       State_Hint : Glib.Variant.Gvariant)
+   is
+      procedure Internal
+         (Self       : System.Address;
+          State_Hint : System.Address);
+      pragma Import (C, Internal, "g_simple_action_set_state_hint");
+   begin
+      Internal (Get_Object (Self), Get_Object (State_Hint));
+   end Set_State_Hint;
 
    --------------
    -- Activate --
@@ -221,7 +235,7 @@ package body Glib.Simple_Action is
       (Self : not null access Gsimple_Action_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_action_get_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));

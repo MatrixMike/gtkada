@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -100,12 +100,6 @@ package Pango.Font_Map is
    --  This can be used to automatically detect changes to a
    --  Pango.Font_Map.Pango_Font_Map, like in Pango.Context.Pango_Context.
    --  Since: gtk+ 1.32.4
-
-   function Get_Shape_Engine_Type
-      (Self : not null access Pango_Font_Map_Record) return UTF8_String;
-   --  Returns the render ID for shape engines for this fontmap. See the
-   --  <structfield>render_type</structfield> field of Pango_Engine_Info.
-   --  Since: gtk+ 1.4
 
    function List_Families
       (Self : not null access Pango_Font_Map_Record)

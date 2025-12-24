@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,7 +24,7 @@
 pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings; use Interfaces.C.Strings;
+with Gtkada.Types; use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gdk.Cursor is
@@ -70,9 +70,9 @@ package body Gdk.Cursor is
    is
       function Internal
          (Display : System.Address;
-          Name    : Interfaces.C.Strings.chars_ptr) return Gdk_Cursor;
+          Name    : Gtkada.Types.Chars_Ptr) return Gdk_Cursor;
       pragma Import (C, Internal, "gdk_cursor_new_from_name");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
       Tmp_Return : Gdk_Cursor;
       Self       : Gdk_Cursor;
    begin
@@ -143,9 +143,9 @@ package body Gdk.Cursor is
    is
       function Internal
          (Display : System.Address;
-          Name    : Interfaces.C.Strings.chars_ptr) return Gdk_Cursor;
+          Name    : Gtkada.Types.Chars_Ptr) return Gdk_Cursor;
       pragma Import (C, Internal, "gdk_cursor_new_from_name");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
       Tmp_Return : Gdk_Cursor;
    begin
       Tmp_Return := Internal (Get_Object (Display), Tmp_Name);

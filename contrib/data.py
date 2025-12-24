@@ -40,6 +40,7 @@ interfaces = (
     "Action",
     "ActionGroup",
     "ActionMap",
+    "ListModel",
     "--AppInfo",  # Not tested yet, from Gio
     "--AsyncInitable",  # Not tested yet, from Gio
     "--AsyncResult",  # Not tested yet, from Gio
@@ -77,13 +78,18 @@ binding = ("--GdkAtom",   # No binding necessary, too low-level
            "GdkCursor",
            "GdkDevice",
            "GdkDeviceManager",
+           "GdkDeviceTool",
            "GdkDisplay",
            "GdkDragContext",
+           "GdkDrawingContext",
            "GdkEvent",
            "GdkFrameClock",
            "GdkFrameTimings",
+           "GdkGLContext",
            "GdkRGBA",
+           "GdkMonitor",
            "GdkScreen",
+           "GdkSeat",
            "GdkWindow",
 
            "GApplication",
@@ -135,6 +141,7 @@ binding = ("--GdkAtom",   # No binding necessary, too low-level
            "--GFilterOutputStream",  # Not tested yet, from Gio
            "--GIOExtension",  # Not tested yet, from Gio
            "--GIOExtensionPoint",  # Not tested yet, from Gio
+           "GIOChannel",
            "--GIOModule",  # Not tested yet, from Gio
            "--GIOModuleScope",  # Not tested yet, from Gio
            "--GIOSchedulerJob",  # Not tested yet, from Gio
@@ -157,6 +164,9 @@ binding = ("--GdkAtom",   # No binding necessary, too low-level
            "GNotification",
            "--GOutputStream",  # Not tested yet, from Gio
            "GOptionContext",
+           "GPoll",
+           "Spawn",
+           "Utils",
 
            "--GParamSpec",   # Bound manually
            "--GParamSpecBoolean",   # Bound manually
@@ -361,6 +371,7 @@ binding = ("--GdkAtom",   # No binding necessary, too low-level
            "GtkGestureSwipe",
            "GtkGestureZoom",
            "GtkGradient",
+           "GtkGLArea",
            "GtkGrid",
            "GtkHandleBox",
            "GtkHBox",
@@ -462,6 +473,7 @@ binding = ("--GdkAtom",   # No binding necessary, too low-level
            "GtkSeparator",
            "GtkSeparatorMenuItem",
            "GtkSeparatorToolItem",
+           "GtkShortcutsWindow",
            "GtkSizeGroup",
            "GtkScrollbar",
            "GtkScrolledWindow",
@@ -611,6 +623,7 @@ naming.girname_to_ctype = {
     "Gdk.EventOwnerChange": "GdkEventOwnerChange*",
     "Gdk.Pixmap":          "GdkPixmap*",
     "Gdk.Image":           "GdkImage*",
+    "Gdk.GLContext":       "GdkGLContext*",
     "Gdk.DragContext":     "GdkDragContext",
     "GdkPixbuf.PixbufAnimation": "GdkPixbufAnimation*",
     "Gdk.Bitmap":          "GdkBitmap*",
@@ -628,6 +641,7 @@ naming.girname_to_ctype = {
     "TreeModel":           "GtkTreeModel*",
     "GObject.InitiallyUnowned": "GObject*",  # An alias
     "GObject.ParamSpec":   "GParamSpec",
+    "Giochannel":          "GIOChannel*",
 }
 
 # Naming exceptions. In particular maps Ada keywords.
@@ -654,6 +668,8 @@ naming.exceptions = {
 
     "Gtk_Uimanager": "Gtk_UI_Manager",
     "Gicon": "G_Icon",
+    "Gtk_Glarea": "Gtk_GLArea",
+    "Gdk_Glcontext": "Gdk_GLContext",
 }
 
 # Maps C types to type descriptions.
@@ -666,6 +682,7 @@ naming.type_exceptions = {
     "gdouble":  Proxy("Gdouble", "Glib.Properties.Property_Double"),
     "double":   Proxy("Gdouble", "Glib.Properties.Property_Double"),
     "gshort":   Proxy("Gshort",  "Glib.Properties.Property_Int"),
+    "gushort":  Proxy("Gushort",  "Glib.Properties.Property_Uint"),
     "int":      Proxy("Glib.Gint",    "Glib.Properties.Property_Int"),
     "gint":     Proxy("Glib.Gint",    "Glib.Properties.Property_Int",
                       default_record_field="0"),
@@ -696,6 +713,7 @@ naming.type_exceptions = {
     "GdkRGBA*":  Proxy("Gdk.RGBA.Gdk_RGBA", "Gdk.RGBA.Property_RGBA",
                        "Gdk.RGBA.Gdk_RGBA_Or_Null"),
     "GdkEvent*": Proxy("Gdk.Event.Gdk_Event", ""),
+    "GIOChannel*": Proxy("Glib.IOChannel.Giochannel", ""),
 
     "cairo_t*":              Proxy("Cairo.Cairo_Context"),
     "cairo_format_t":        Proxy("Cairo.Cairo_Format"),

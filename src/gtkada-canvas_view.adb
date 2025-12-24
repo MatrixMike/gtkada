@@ -2,7 +2,7 @@
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -23,8 +23,8 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Conversion;
-with GNAT.Strings;                       use GNAT.Strings;
 with Interfaces.C.Strings;               use Interfaces.C.Strings;
+with GNAT.Strings;                       use GNAT.Strings;
 with System;
 with Cairo;                              use Cairo;
 with Cairo.Matrix;                       use Cairo.Matrix;
@@ -56,18 +56,20 @@ with Gtkada.Canvas_View.Links;           use Gtkada.Canvas_View.Links;
 with Gtkada.Canvas_View.Objects;         use Gtkada.Canvas_View.Objects;
 with Gtkada.Canvas_View.Views;           use Gtkada.Canvas_View.Views;
 with Gtkada.Handlers;                    use Gtkada.Handlers;
-with Gtkada.Types;                       use Gtkada.Types;
 with Pango.Font;                         use Pango.Font;
 with System.Storage_Elements;            use System.Storage_Elements;
 
+pragma Warnings (Off, "call to obsolescent procedure ""Set_Background""");
+--  Deprecated in Gtk+ 3.24
+
 package body Gtkada.Canvas_View is
 
-   Model_Signals : constant Gtkada.Types.Chars_Ptr_Array :=
+   Model_Signals : constant Interfaces.C.Strings.chars_ptr_array :=
      (1 => New_String (String (Signal_Item_Contents_Changed)),
       2 => New_String (String (Signal_Layout_Changed)),
       3 => New_String (String (Signal_Selection_Changed)),
       4 => New_String (String (Signal_Item_Destroyed)));
-   View_Signals : constant Gtkada.Types.Chars_Ptr_Array :=
+   View_Signals : constant Interfaces.C.Strings.chars_ptr_array :=
      (1 => New_String (String (Signal_Viewport_Changed)),
       2 => New_String (String (Signal_Item_Event)),
       3 => New_String (String (Signal_Inline_Editing_Started)),
@@ -694,7 +696,7 @@ package body Gtkada.Canvas_View is
            (Event_Type => Scroll,
             Button     => Button,
             Key        => 0,
-            State      => Event.State,
+            State      => Event.State and Get_Default_Mod_Mask,
             Root_Point => (Event.X_Root, Event.Y_Root),
             M_Point    => Self.Window_To_Model ((X => Event.X, Y => Event.Y)),
             T_Point    => No_Item_Point,
@@ -747,7 +749,7 @@ package body Gtkada.Canvas_View is
         (Event_Type => Button_Press,
          Button     => Event.Button,
          Key        => 0,
-         State      => Event.State,
+         State      => Event.State and Get_Default_Mod_Mask,
          Root_Point => (Event.X_Root, Event.Y_Root),
          M_Point    => Self.Window_To_Model ((X => Event.X, Y => Event.Y)),
          T_Point    => No_Item_Point,
@@ -812,7 +814,7 @@ package body Gtkada.Canvas_View is
 
       if Self.Model /= null then
          Details.Event_Type        := Key_Press;
-         Details.State             := Event.State;
+         Details.State             := Event.State and Get_Default_Mod_Mask;
          Details.Allow_Snapping    := True;
          Details.Allowed_Drag_Area := No_Drag_Allowed;
          Details.Key               := Event.Keyval;
@@ -1002,7 +1004,7 @@ package body Gtkada.Canvas_View is
          if Self.In_Drag then
             Details            := Self.Last_Button_Press;
             Details.Event_Type := In_Drag;
-            Details.State      := Event.State;
+            Details.State      := Event.State and Get_Default_Mod_Mask;
             Details.Root_Point := (Event.X_Root, Event.Y_Root);
             Details.M_Point    :=
               Self.Window_To_Model ((X => Event.X, Y => Event.Y));
@@ -1136,7 +1138,7 @@ package body Gtkada.Canvas_View is
    -------------------
 
    function View_Get_Type return Glib.GType is
-      Info : access GInterface_Info;
+      Info : GInterface_Info_Access;
    begin
       if Glib.Object.Initialize_Class_Record
         (Ancestor     => Gtk.Bin.Get_Type,
@@ -2610,6 +2612,72 @@ package body Gtkada.Canvas_View is
       Set.Include (Abstract_Item (Item));
    end Include_Related_Items;
 
+   ----------
+   -- From --
+   ----------
+
+   procedure From
+     (Self : not null access Canvas_Model_Record'Class;
+      Item : not null access Abstract_Item_Record'Class;
+      Set  : in out Item_Sets.Set)
+   is
+      procedure Internal (C : not null access Abstract_Item_Record'Class);
+      procedure Internal (C : not null access Abstract_Item_Record'Class) is
+      begin
+         if C.all in Canvas_Link_Record'Class
+           and then Canvas_Link (C).From = Abstract_Item (Item)
+         then
+            declare
+               Cur : constant Abstract_Item := Canvas_Link (C).Get_To;
+            begin
+               if not Set.Contains (Abstract_Item (C)) then
+                  Set.Include (Abstract_Item (C));
+                  if not Set.Contains (Cur) then
+                     Set.Include (Cur);
+                     To (Self, Cur, Set);
+                     From (Self, Cur, Set);
+                  end if;
+               end if;
+            end;
+         end if;
+      end Internal;
+   begin
+      Self.For_Each_Item (Internal'Access, Filter => Kind_Link);
+   end From;
+
+   --------
+   -- To --
+   --------
+
+   procedure To
+     (Self : not null access Canvas_Model_Record'Class;
+      Item : not null access Abstract_Item_Record'Class;
+      Set  : in out Item_Sets.Set)
+   is
+      procedure Internal (C : not null access Abstract_Item_Record'Class);
+      procedure Internal (C : not null access Abstract_Item_Record'Class) is
+      begin
+         if C.all in Canvas_Link_Record'Class
+           and then Canvas_Link (C).To = Abstract_Item (Item)
+         then
+            declare
+               Cur : constant Abstract_Item := Canvas_Link (C).Get_From;
+            begin
+               if not Set.Contains (Abstract_Item (C)) then
+                  Set.Include (Abstract_Item (C));
+                  if not Set.Contains (Cur) then
+                     Set.Include (Cur);
+                     To (Self, Cur, Set);
+                     From (Self, Cur, Set);
+                  end if;
+               end if;
+            end;
+         end if;
+      end Internal;
+   begin
+      Self.For_Each_Item (Internal'Access, Filter => Kind_Link);
+   end To;
+
    -----------
    -- Clear --
    -----------
@@ -2854,6 +2922,16 @@ package body Gtkada.Canvas_View is
             Compute_Layout_For_Curve_Link (Self, Context);
       end case;
    end Refresh_Layout;
+
+   ------------------------
+   -- Get_Selected_Items --
+   ------------------------
+
+   function Get_Selected_Items
+     (Self : not null access Canvas_Model_Record) return Item_Sets.Set is
+   begin
+      return Self.Selection;
+   end Get_Selected_Items;
 
    -------------------
    -- For_Each_Link --

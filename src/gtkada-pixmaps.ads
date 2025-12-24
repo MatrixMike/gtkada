@@ -27,13 +27,12 @@
 --
 --  </description>
 
-with Interfaces.C.Strings;
 with Gtkada.Types;
 
 package Gtkada.Pixmaps is
 
    function "+" (Str : String) return Gtkada.Types.Chars_Ptr
-     renames Interfaces.C.Strings.New_String;
+     renames Gtkada.Types.New_String;
 
    Warning_Xpm : Gtkada.Types.Chars_Ptr_Array :=
    --  Provide a yellow exclamation point

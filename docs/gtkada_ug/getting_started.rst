@@ -17,78 +17,13 @@ How to build and install GtkAda
 This section explains how to build and install GtkAda on your machine.
 
 On Windows systems, we provide an automatic installer that installs GtkAda
-along with dependent components like gtk+ libraries and `Glade`.  If you are a
-Windows user, you can skip the rest of this section which will address
-installation on Unix systems.
+along with dependent components like gtk+ libraries.
 
-On Unix systems, you first need to install the glib and gtk+ libraries.
-Download the compatible packages from the gtk+ web site (`http://www.gtk.org
-<http://www.gtk.org>`_), compile and install it.  Alternatively, if your
-operating system vendor provides glib and gtk+ development packages, you can
-install the libraries they provide.
+On Unix systems, just follow the instructions listed in the
+:file:`INSTALL` file. Note that the :file:`doinstall.sh` script
+will compile GtkAda, so make sure the version of GNAT that you want to use is
+in your PATH.
 
-Change your PATH environment variable so that the script `pkg-config`, which
-indicates where gtk+ was installed and what libraries it needs is automatically
-found by GtkAda. You will no longer need this script once GtkAda is installed,
-unless you develop part of your application in C.
-
-OpenGL support will not be activated in GtkAda unless you already have the
-OpenGL libraries on your systems. You can for instance look at Mesa, which is
-free implementation.
-
-Optionally, you can also install the `Glade` interface builder. Get the
-compatible package from the Glade web site, compile and install it.
-
-You can finally download the latest version of GtkAda from the web site.  Untar
-and uncompress the package, then simply do the following steps::
-
-  $ ./configure
-  $ make
-  $ make tests     (this step is optional)
-  $ make install
-
-As usual with the `configure` script, you can specify where you want
-to install the GtkAda libraries by using the `--prefix` switch.
-
-You can specify the switch `--disable-shared` to prevent building shared
-libraries, even if your system supports them (by default, both shared and
-static libraries are installed). By default, your application will be linked
-statically with the GtkAda libraries. You can override this default by
-specifying `--enable-shared` as a switch to `configure`, although you can
-override it later through the LIBRARY_TYPE scenario variable.
-
-If you have some OpenGL libraries installed on your system, you can make sure
-that `configure` finds them by specifying the `--with-GL-prefix` switch on the
-command line. `configure` should be able to automatically detect the libraries
-however.
-
-You must then make sure that the system will be able to find the dynamic
-libraries at run time if your application uses them. Typically, you would do
-one of the following:
-
-* run `ldconfig` if you installed GtkAda in one of the standard
-  location and you are super-user on your machine
-* edit `/etc/ld.conf` if you are super-user but did not install
-  GtkAda in one of the standard location. Add the path that contains
-  libgtkada.so (by default :file:`/usr/local/lib` or :file:`$prefix/lib`.
-* modify your `LD_LIBRARY_PATH` environment variable if you are
-  not super-user. You should simply add the path to libgtkada.
-
-In addition, if you are using precompiled Gtk+ binary packages, you will
-also need to set the `FONTCONFIG_FILE` environment variable to point to
-the :file:`prefix/etc/fonts/fonts.conf` file of your binary installation.
-
-For example, assuming you have installed Gtk+ under :file:`/opt/gtk` and
-using bash::
-
-  $ export FONTCONFIG_FILE=/opt/gtk/etc/fonts/fonts.conf
-  
-If your application is using printing, on UNIX and Linux you will need to
-point your environment variable GTK_EXE_PREFIX to the root directory of your
-Gtk+ installation::
-
-  $ export GTK_EXE_PREFIX=/opt/gtk/
-  
 
 How to distribute a GtkAda application
 ======================================
@@ -143,9 +78,21 @@ if you are using the system's libraries)::
 
    FONTCONFIG_FILE=$prefix/etc/fonts/fonts.conf
    export FONTCONFIG_FILE
-   
+
    XDG_DATA_DIRS=$XDG_DATA_DIRS:$prefix/share
    export XDG_DATA_DIRS
+
+GDK_PIXBUF_MODULE_FILE contains the paths to find the libpixbufloader-*
+libraries. By default, the paths are relative to the executable loading the
+libraries: thus, GDK_PIXBUF_MODULEDIR must be installed relatively to the
+executable. When the paths are absolute, the location of
+GDK_PIXBUF_MODULEDIR doesn't matter when loading the libraries however it will
+be necessary to re-generate GDK_PIXBUF_MODULE_FILE on each host.
+Two executables are packaged with GtkAda to re-generate the modules' paths:
+`gdk-pixbuf-query-loaders`, which generates relative paths, and
+`gdk-pixbuf-query-loaders-absolute`, which generates absolute paths. Both should
+be launched with the `--update-cache` option to re-generate the proper cache file
+(by default it will just output the contents on stdout).
 
 Organization of the GtkAda package
 ==================================
@@ -190,10 +137,13 @@ How to compile an application with GtkAda
 
 This section explains how you can compile your own applications.
 
-A set of project files is installed along with GtkAda. If you have installed
-GtkAda in the same location as GNAT itself, nothing else needs to be done.
+.. note::
+   If GNAT is already installed on your system, it is recommended to
+   install GtkAda in a separate directory to avoid potential file conflicts.
 
-Otherwise, you need to make the directory that contains these project files
+A set of project files is installed along with GtkAda.
+
+You need to make the directory that contains these project files
 visible to the compiler. This is done by adding the directory to the
 `GPR_PROJECT_PATH` environment variable. Assuming you have installed the
 library in :file:`prefix`, the directory you need to add is
@@ -208,13 +158,13 @@ On Unix, this is done with::
      export GPR_PROJECT_PATH
 
 .. highlight:: ada
-  
+
 To build your own application, you should then setup a project file (see
 the GNAT documentation for more details on project files), which simply
 contains the statement::
 
   with "gtkada";
-  
+
 This will automatically set the right compiler and linker options, so that
 your application is linked with GtkAda.
 
@@ -278,7 +228,7 @@ recompiled as-is on other platforms::
   +----+-----------+----+----+---------------+
   |        GLIB         |   X-Window / Win32  |
   +---------------------+--------------------+
-  
+
 Although the packages have been evolving a lot since the first versions of
 GtkAda, the specs are stabilizing now. We will try as much as possible to
 provide backward compatibility whenever possible.
@@ -293,18 +243,18 @@ We have tried to adopt a consistent naming scheme for Ada identifiers:
   sign (_) is used to separate words, e.g::
 
     Gtk_Button   Gtk_Color_Selection_Dialog
-    
+
 * Because of a clash between Ada keywords and widget names, there
   are two exceptions to the above general rule::
 
     Gtk.GEntry.Gtk_Entry   Gtk.GRange.Gtk_Range
-    
+
 * The function names are the same as in  C, ignoring the leading
   `gtk_` and the widget name, e.g::
 
     gtk_misc_set_padding        =>  Gtk.Misc.Set_Padding
     gtk_toggle_button_set_state =>  Gtk.Toggle_Button.Set_State
-    
+
 * Most enum types have been grouped in the :file:`gtk-enums.ads` file
 
 * Some features have been implemented as generic packages. These

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,12 +27,29 @@ with Ada.Unchecked_Conversion;
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
-with GtkAda.Types;               use GtkAda.Types;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Glib.Application is
+
+   --------------
+   -- Register --
+   --------------
+
+   function Register
+     (Self        : not null access Gapplication_Record;
+      Cancellable : access Glib.Cancellable.Gcancellable_Record'Class)
+   return Boolean
+   is
+      function Internal
+        (Self        : System.Address;
+         Cancellable : System.Address;
+         Error       : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "g_application_register");
+   begin
+      return Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Cancellable)), System.Null_Address) /= 0;
+   end Register;
 
    gnat_argc : Interfaces.C.int;
    pragma Import (C, gnat_argc);
@@ -98,15 +115,15 @@ package body Glib.Application is
        Flags          : GApplication_Flags)
    is
       function Internal
-         (Application_Id : Interfaces.C.Strings.chars_ptr;
+         (Application_Id : Gtkada.Types.Chars_Ptr;
           Flags          : GApplication_Flags) return System.Address;
       pragma Import (C, Internal, "g_application_new");
-      Tmp_Application_Id : Interfaces.C.Strings.chars_ptr;
+      Tmp_Application_Id : Gtkada.Types.Chars_Ptr;
       Tmp_Return         : System.Address;
    begin
       if not Self.Is_Created then
          if Application_Id = "" then
-            Tmp_Application_Id := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Application_Id := Gtkada.Types.Null_Ptr;
          else
             Tmp_Application_Id := New_String (Application_Id);
          end if;
@@ -128,6 +145,26 @@ package body Glib.Application is
    end Activate;
 
    ------------------------
+   -- Bind_Busy_Property --
+   ------------------------
+
+   procedure Bind_Busy_Property
+      (Self     : not null access Gapplication_Record;
+       Object   : System.Address;
+       Property : UTF8_String)
+   is
+      procedure Internal
+         (Self     : System.Address;
+          Object   : System.Address;
+          Property : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "g_application_bind_busy_property");
+      Tmp_Property : Gtkada.Types.Chars_Ptr := New_String (Property);
+   begin
+      Internal (Get_Object (Self), Object, Tmp_Property);
+      Free (Tmp_Property);
+   end Bind_Busy_Property;
+
+   ------------------------
    -- Get_Application_Id --
    ------------------------
 
@@ -135,7 +172,7 @@ package body Glib.Application is
       (Self : not null access Gapplication_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_application_get_application_id");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -166,7 +203,7 @@ package body Glib.Application is
        return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_application_command_line_get_cwd");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -180,7 +217,7 @@ package body Glib.Application is
       (Self : not null access Gapplication_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_application_get_dbus_object_path");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -240,6 +277,19 @@ package body Glib.Application is
    begin
       return Internal (Get_Object (Self));
    end Get_Inactivity_Timeout;
+
+   -----------------
+   -- Get_Is_Busy --
+   -----------------
+
+   function Get_Is_Busy
+      (Self : not null access Gapplication_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "g_application_get_is_busy");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Is_Busy;
 
    -----------------------
    -- Get_Is_Registered --
@@ -303,7 +353,7 @@ package body Glib.Application is
       (Self : not null access Gapplication_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_application_get_resource_base_path");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -319,11 +369,10 @@ package body Glib.Application is
    is
       function Internal
          (Self : System.Address;
-          Name : Interfaces.C.Strings.chars_ptr)
-          return Interfaces.C.Strings.chars_ptr;
+          Name : Gtkada.Types.Chars_Ptr) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "g_application_command_line_getenv");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_Return : Interfaces.C.Strings.chars_ptr;
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_Return : Gtkada.Types.Chars_Ptr;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Name);
       Free (Tmp_Name);
@@ -363,23 +412,6 @@ package body Glib.Application is
       Internal (Get_Object (Self));
    end Quit;
 
-   --------------
-   -- Register --
-   --------------
-
-   function Register
-      (Self        : not null access Gapplication_Record;
-       Cancellable : access Glib.Cancellable.Gcancellable_Record'Class)
-       return Boolean
-   is
-      function Internal
-         (Self        : System.Address;
-          Cancellable : System.Address) return Glib.Gboolean;
-      pragma Import (C, Internal, "g_application_register");
-   begin
-      return Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Cancellable))) /= 0;
-   end Register;
-
    -------------
    -- Release --
    -------------
@@ -403,13 +435,13 @@ package body Glib.Application is
       function Internal
          (Self : System.Address;
           Argc : Glib.Gint;
-          Argv : Interfaces.C.Strings.chars_ptr_array) return Glib.Gint;
+          Argv : Gtkada.Types.chars_ptr_array) return Glib.Gint;
       pragma Import (C, Internal, "g_application_run");
-      Tmp_Argv   : Interfaces.C.Strings.chars_ptr_array := From_String_List (Argv);
+      Tmp_Argv   : Gtkada.Types.chars_ptr_array := From_String_List (Argv);
       Tmp_Return : Glib.Gint;
    begin
       Tmp_Return := Internal (Get_Object (Self), Argc, Tmp_Argv);
-      GtkAda.Types.Free (Tmp_Argv);
+      Gtkada.Types.Free (Tmp_Argv);
       return Tmp_Return;
    end Run;
 
@@ -424,13 +456,13 @@ package body Glib.Application is
    is
       procedure Internal
          (Self         : System.Address;
-          Id           : Interfaces.C.Strings.chars_ptr;
+          Id           : Gtkada.Types.Chars_Ptr;
           Notification : System.Address);
       pragma Import (C, Internal, "g_application_send_notification");
-      Tmp_Id : Interfaces.C.Strings.chars_ptr;
+      Tmp_Id : Gtkada.Types.Chars_Ptr;
    begin
       if Id = "" then
-         Tmp_Id := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Id := Gtkada.Types.Null_Ptr;
       else
          Tmp_Id := New_String (Id);
       end if;
@@ -464,12 +496,12 @@ package body Glib.Application is
    is
       procedure Internal
          (Self           : System.Address;
-          Application_Id : Interfaces.C.Strings.chars_ptr);
+          Application_Id : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_application_set_application_id");
-      Tmp_Application_Id : Interfaces.C.Strings.chars_ptr;
+      Tmp_Application_Id : Gtkada.Types.Chars_Ptr;
    begin
       if Application_Id = "" then
-         Tmp_Application_Id := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Application_Id := Gtkada.Types.Null_Ptr;
       else
          Tmp_Application_Id := New_String (Application_Id);
       end if;
@@ -530,6 +562,75 @@ package body Glib.Application is
       Internal (Get_Object (Self), Inactivity_Timeout);
    end Set_Inactivity_Timeout;
 
+   ------------------------------------
+   -- Set_Option_Context_Description --
+   ------------------------------------
+
+   procedure Set_Option_Context_Description
+      (Self        : not null access Gapplication_Record;
+       Description : UTF8_String := "")
+   is
+      procedure Internal
+         (Self        : System.Address;
+          Description : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "g_application_set_option_context_description");
+      Tmp_Description : Gtkada.Types.Chars_Ptr;
+   begin
+      if Description = "" then
+         Tmp_Description := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Description := New_String (Description);
+      end if;
+      Internal (Get_Object (Self), Tmp_Description);
+      Free (Tmp_Description);
+   end Set_Option_Context_Description;
+
+   -----------------------------------------
+   -- Set_Option_Context_Parameter_String --
+   -----------------------------------------
+
+   procedure Set_Option_Context_Parameter_String
+      (Self             : not null access Gapplication_Record;
+       Parameter_String : UTF8_String := "")
+   is
+      procedure Internal
+         (Self             : System.Address;
+          Parameter_String : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "g_application_set_option_context_parameter_string");
+      Tmp_Parameter_String : Gtkada.Types.Chars_Ptr;
+   begin
+      if Parameter_String = "" then
+         Tmp_Parameter_String := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Parameter_String := New_String (Parameter_String);
+      end if;
+      Internal (Get_Object (Self), Tmp_Parameter_String);
+      Free (Tmp_Parameter_String);
+   end Set_Option_Context_Parameter_String;
+
+   --------------------------------
+   -- Set_Option_Context_Summary --
+   --------------------------------
+
+   procedure Set_Option_Context_Summary
+      (Self    : not null access Gapplication_Record;
+       Summary : UTF8_String := "")
+   is
+      procedure Internal
+         (Self    : System.Address;
+          Summary : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "g_application_set_option_context_summary");
+      Tmp_Summary : Gtkada.Types.Chars_Ptr;
+   begin
+      if Summary = "" then
+         Tmp_Summary := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Summary := New_String (Summary);
+      end if;
+      Internal (Get_Object (Self), Tmp_Summary);
+      Free (Tmp_Summary);
+   end Set_Option_Context_Summary;
+
    ----------------------------
    -- Set_Resource_Base_Path --
    ----------------------------
@@ -540,18 +641,38 @@ package body Glib.Application is
    is
       procedure Internal
          (Self          : System.Address;
-          Resource_Path : Interfaces.C.Strings.chars_ptr);
+          Resource_Path : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_application_set_resource_base_path");
-      Tmp_Resource_Path : Interfaces.C.Strings.chars_ptr;
+      Tmp_Resource_Path : Gtkada.Types.Chars_Ptr;
    begin
       if Resource_Path = "" then
-         Tmp_Resource_Path := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Resource_Path := Gtkada.Types.Null_Ptr;
       else
          Tmp_Resource_Path := New_String (Resource_Path);
       end if;
       Internal (Get_Object (Self), Tmp_Resource_Path);
       Free (Tmp_Resource_Path);
    end Set_Resource_Base_Path;
+
+   --------------------------
+   -- Unbind_Busy_Property --
+   --------------------------
+
+   procedure Unbind_Busy_Property
+      (Self     : not null access Gapplication_Record;
+       Object   : System.Address;
+       Property : UTF8_String)
+   is
+      procedure Internal
+         (Self     : System.Address;
+          Object   : System.Address;
+          Property : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "g_application_unbind_busy_property");
+      Tmp_Property : Gtkada.Types.Chars_Ptr := New_String (Property);
+   begin
+      Internal (Get_Object (Self), Object, Tmp_Property);
+      Free (Tmp_Property);
+   end Unbind_Busy_Property;
 
    -----------------
    -- Unmark_Busy --
@@ -574,9 +695,9 @@ package body Glib.Application is
    is
       procedure Internal
          (Self : System.Address;
-          Id   : Interfaces.C.Strings.chars_ptr);
+          Id   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_application_withdraw_notification");
-      Tmp_Id : Interfaces.C.Strings.chars_ptr := New_String (Id);
+      Tmp_Id : Gtkada.Types.Chars_Ptr := New_String (Id);
    begin
       Internal (Get_Object (Self), Tmp_Id);
       Free (Tmp_Id);
@@ -592,9 +713,9 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_added");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -611,10 +732,10 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Enabled     : Glib.Gboolean);
       pragma Import (C, Internal, "g_action_group_action_enabled_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Boolean'Pos (Enabled));
       Free (Tmp_Action_Name);
@@ -630,9 +751,9 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_removed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -649,10 +770,10 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           State       : System.Address);
       pragma Import (C, Internal, "g_action_group_action_state_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (State));
       Free (Tmp_Action_Name);
@@ -669,10 +790,10 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Parameter   : System.Address);
       pragma Import (C, Internal, "g_action_group_activate_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Parameter));
       Free (Tmp_Action_Name);
@@ -724,10 +845,10 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Value       : System.Address);
       pragma Import (C, Internal, "g_action_group_change_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Value));
       Free (Tmp_Action_Name);
@@ -743,9 +864,9 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_get_action_enabled");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -763,10 +884,10 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_parameter_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -784,10 +905,9 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -805,10 +925,9 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state_hint");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -826,10 +945,10 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_state_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -847,9 +966,9 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_has_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -882,10 +1001,9 @@ package body Glib.Application is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return Glib.Action.Gaction;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Action.Gaction;
       pragma Import (C, Internal, "g_action_map_lookup_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Action.Gaction;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -908,7 +1026,7 @@ package body Glib.Application is
    is
       function Internal
          (Self               : System.Address;
-          Action_Name        : Interfaces.C.Strings.chars_ptr;
+          Action_Name        : Gtkada.Types.Chars_Ptr;
           Acc_Enabled        : access Glib.Gboolean;
           Acc_Parameter_Type : access Glib.Variant.Gvariant_Type;
           Acc_State_Type     : access Glib.Variant.Gvariant_Type;
@@ -920,7 +1038,7 @@ package body Glib.Application is
       Acc_State_Type     : aliased Glib.Variant.Gvariant_Type;
       Acc_State_Hint     : aliased Glib.Variant.Gvariant;
       Acc_State          : aliased Glib.Variant.Gvariant;
-      Tmp_Action_Name    : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name    : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Acc_Enabled    : aliased Glib.Gboolean;
       Tmp_Acc_State_Hint : aliased System.Address;
       Tmp_Acc_State      : aliased System.Address;
@@ -957,9 +1075,9 @@ package body Glib.Application is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_map_remove_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -983,10 +1101,9 @@ package body Glib.Application is
 
    function Id_Is_Valid (Application_Id : UTF8_String) return Boolean is
       function Internal
-         (Application_Id : Interfaces.C.Strings.chars_ptr)
-          return Glib.Gboolean;
+         (Application_Id : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_application_id_is_valid");
-      Tmp_Application_Id : Interfaces.C.Strings.chars_ptr := New_String (Application_Id);
+      Tmp_Application_Id : Gtkada.Types.Chars_Ptr := New_String (Application_Id);
       Tmp_Return         : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Tmp_Application_Id);
@@ -1016,6 +1133,16 @@ package body Glib.Application is
    function Address_To_Cb is new Ada.Unchecked_Conversion
      (System.Address, Cb_GObject_Gapplication_Command_Line_Gint);
 
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_Gapplication_Boolean, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_Gapplication_Boolean);
+
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_GObject_Boolean, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_GObject_Boolean);
+
    procedure Connect
       (Object  : access Gapplication_Record'Class;
        C_Name  : Glib.Signal_Name;
@@ -1026,6 +1153,12 @@ package body Glib.Application is
       (Object  : access Gapplication_Record'Class;
        C_Name  : Glib.Signal_Name;
        Handler : Cb_Gapplication_Gapplication_Command_Line_Gint;
+       After   : Boolean);
+
+   procedure Connect
+      (Object  : access Gapplication_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_Gapplication_Boolean;
        After   : Boolean);
 
    procedure Connect_Slot
@@ -1041,6 +1174,22 @@ package body Glib.Application is
        Handler : Cb_GObject_Gapplication_Command_Line_Gint;
        After   : Boolean;
        Slot    : access Glib.Object.GObject_Record'Class := null);
+
+   procedure Connect_Slot
+      (Object  : access Gapplication_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_GObject_Boolean;
+       After   : Boolean;
+       Slot    : access Glib.Object.GObject_Record'Class := null);
+
+   procedure Marsh_GObject_Boolean
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address);
+   pragma Convention (C, Marsh_GObject_Boolean);
 
    procedure Marsh_GObject_Gapplication_Command_Line_Gint
       (Closure         : GClosure;
@@ -1059,6 +1208,15 @@ package body Glib.Application is
        Invocation_Hint : System.Address;
        User_Data       : System.Address);
    pragma Convention (C, Marsh_GObject_Void);
+
+   procedure Marsh_Gapplication_Boolean
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address);
+   pragma Convention (C, Marsh_Gapplication_Boolean);
 
    procedure Marsh_Gapplication_Gapplication_Command_Line_Gint
       (Closure         : GClosure;
@@ -1116,6 +1274,25 @@ package body Glib.Application is
          After       => After);
    end Connect;
 
+   -------------
+   -- Connect --
+   -------------
+
+   procedure Connect
+      (Object  : access Gapplication_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_Gapplication_Boolean;
+       After   : Boolean)
+   is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_Gapplication_Boolean'Access,
+         Handler     => Cb_To_Address (Handler),--  Set in the closure
+         After       => After);
+   end Connect;
+
    ------------------
    -- Connect_Slot --
    ------------------
@@ -1158,6 +1335,48 @@ package body Glib.Application is
          After       => After);
    end Connect_Slot;
 
+   ------------------
+   -- Connect_Slot --
+   ------------------
+
+   procedure Connect_Slot
+      (Object  : access Gapplication_Record'Class;
+       C_Name  : Glib.Signal_Name;
+       Handler : Cb_GObject_Boolean;
+       After   : Boolean;
+       Slot    : access Glib.Object.GObject_Record'Class := null)
+   is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_GObject_Boolean'Access,
+         Handler     => Cb_To_Address (Handler),--  Set in the closure
+         Slot_Object => Slot,
+         After       => After);
+   end Connect_Slot;
+
+   ---------------------------
+   -- Marsh_GObject_Boolean --
+   ---------------------------
+
+   procedure Marsh_GObject_Boolean
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address)
+   is
+      pragma Unreferenced (N_Params, Params, Invocation_Hint, User_Data);
+      H   : constant Cb_GObject_Boolean := Address_To_Cb (Get_Callback (Closure));
+      Obj : constant Glib.Object.GObject := Glib.Object.Convert (Get_Data (Closure));
+      V   : aliased Boolean := H (Obj);
+   begin
+      Set_Value (Return_Value, V'Address);
+      exception when E : others => Process_Exception (E);
+   end Marsh_GObject_Boolean;
+
    --------------------------------------------------
    -- Marsh_GObject_Gapplication_Command_Line_Gint --
    --------------------------------------------------
@@ -1198,6 +1417,27 @@ package body Glib.Application is
       H (Obj);
       exception when E : others => Process_Exception (E);
    end Marsh_GObject_Void;
+
+   --------------------------------
+   -- Marsh_Gapplication_Boolean --
+   --------------------------------
+
+   procedure Marsh_Gapplication_Boolean
+      (Closure         : GClosure;
+       Return_Value    : Glib.Values.GValue;
+       N_Params        : Glib.Guint;
+       Params          : Glib.Values.C_GValues;
+       Invocation_Hint : System.Address;
+       User_Data       : System.Address)
+   is
+      pragma Unreferenced (N_Params, Invocation_Hint, User_Data);
+      H   : constant Cb_Gapplication_Boolean := Address_To_Cb (Get_Callback (Closure));
+      Obj : constant Gapplication := Gapplication (Unchecked_To_Object (Params, 0));
+      V   : aliased Boolean := H (Obj);
+   begin
+      Set_Value (Return_Value, V'Address);
+      exception when E : others => Process_Exception (E);
+   end Marsh_Gapplication_Boolean;
 
    -------------------------------------------------------
    -- Marsh_Gapplication_Gapplication_Command_Line_Gint --
@@ -1293,6 +1533,33 @@ package body Glib.Application is
    begin
       Connect_Slot (Self, "command-line" & ASCII.NUL, Call, After, Slot);
    end On_Command_Line;
+
+   ------------------
+   -- On_Name_Lost --
+   ------------------
+
+   procedure On_Name_Lost
+      (Self  : not null access Gapplication_Record;
+       Call  : Cb_Gapplication_Boolean;
+       After : Boolean := False)
+   is
+   begin
+      Connect (Self, "name-lost" & ASCII.NUL, Call, After);
+   end On_Name_Lost;
+
+   ------------------
+   -- On_Name_Lost --
+   ------------------
+
+   procedure On_Name_Lost
+      (Self  : not null access Gapplication_Record;
+       Call  : Cb_GObject_Boolean;
+       Slot  : not null access Glib.Object.GObject_Record'Class;
+       After : Boolean := False)
+   is
+   begin
+      Connect_Slot (Self, "name-lost" & ASCII.NUL, Call, After, Slot);
+   end On_Name_Lost;
 
    -----------------
    -- On_Shutdown --

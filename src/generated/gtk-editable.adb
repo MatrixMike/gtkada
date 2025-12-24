@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -51,7 +51,7 @@ package body Gtk.Editable is
       function Internal
          (Editable  : Gtk_Editable;
           Start_Pos : Glib.Gint;
-          End_Pos   : Glib.Gint) return Interfaces.C.Strings.chars_ptr;
+          End_Pos   : Glib.Gint) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_editable_get_chars");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Editable, Start_Pos, End_Pos));
@@ -105,11 +105,11 @@ package body Gtk.Editable is
    is
       procedure Internal
          (Editable        : Gtk_Editable;
-          New_Text        : Interfaces.C.Strings.chars_ptr;
+          New_Text        : Gtkada.Types.Chars_Ptr;
           New_Text_Length : Glib.Gint;
           Position        : in out Glib.Gint);
       pragma Import (C, Internal, "gtk_editable_insert_text");
-      Tmp_New_Text : Interfaces.C.Strings.chars_ptr := New_String (New_Text);
+      Tmp_New_Text : Gtkada.Types.Chars_Ptr := New_String (New_Text);
    begin
       Internal (Editable, Tmp_New_Text, New_Text_Length, Position);
       Free (Tmp_New_Text);

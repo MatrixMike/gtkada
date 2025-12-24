@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Info_Bar is
@@ -101,10 +101,10 @@ package body Gtk.Info_Bar is
    is
       function Internal
          (Self        : System.Address;
-          Button_Text : Interfaces.C.Strings.chars_ptr;
+          Button_Text : Gtkada.Types.Chars_Ptr;
           Response_Id : Glib.Gint) return System.Address;
       pragma Import (C, Internal, "gtk_info_bar_add_button");
-      Tmp_Button_Text : Interfaces.C.Strings.chars_ptr := New_String (Button_Text);
+      Tmp_Button_Text : Gtkada.Types.Chars_Ptr := New_String (Button_Text);
       Stub_Gtk_Widget : Gtk.Widget.Gtk_Widget_Record;
       Tmp_Return      : System.Address;
    begin
@@ -157,6 +157,19 @@ package body Gtk.Info_Bar is
    begin
       return Internal (Get_Object (Self));
    end Get_Message_Type;
+
+   ------------------
+   -- Get_Revealed --
+   ------------------
+
+   function Get_Revealed
+      (Self : not null access Gtk_Info_Bar_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_info_bar_get_revealed");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Revealed;
 
    ---------------------------
    -- Get_Show_Close_Button --
@@ -232,6 +245,20 @@ package body Gtk.Info_Bar is
    begin
       Internal (Get_Object (Self), Response_Id, Boolean'Pos (Setting));
    end Set_Response_Sensitive;
+
+   ------------------
+   -- Set_Revealed --
+   ------------------
+
+   procedure Set_Revealed
+      (Self     : not null access Gtk_Info_Bar_Record;
+       Revealed : Boolean)
+   is
+      procedure Internal (Self : System.Address; Revealed : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_info_bar_set_revealed");
+   begin
+      Internal (Get_Object (Self), Boolean'Pos (Revealed));
+   end Set_Revealed;
 
    ---------------------------
    -- Set_Show_Close_Button --

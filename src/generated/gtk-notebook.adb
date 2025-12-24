@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Notebook is
@@ -145,6 +145,20 @@ package body Gtk.Notebook is
       Internal (Get_Object (Notebook), Get_Object (Child), Get_Object_Or_Null (GObject (Tab_Label)), Get_Object_Or_Null (GObject (Menu_Label)));
    end Append_Page_Menu;
 
+   ----------------
+   -- Detach_Tab --
+   ----------------
+
+   procedure Detach_Tab
+      (Notebook : not null access Gtk_Notebook_Record;
+       Child    : not null access Gtk.Widget.Gtk_Widget_Record'Class)
+   is
+      procedure Internal (Notebook : System.Address; Child : System.Address);
+      pragma Import (C, Internal, "gtk_notebook_detach_tab");
+   begin
+      Internal (Get_Object (Notebook), Get_Object (Child));
+   end Detach_Tab;
+
    -----------------------
    -- Get_Action_Widget --
    -----------------------
@@ -183,7 +197,7 @@ package body Gtk.Notebook is
       (Notebook : not null access Gtk_Notebook_Record) return UTF8_String
    is
       function Internal
-         (Notebook : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Notebook : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_notebook_get_group_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Notebook)));
@@ -218,7 +232,7 @@ package body Gtk.Notebook is
    is
       function Internal
          (Notebook : System.Address;
-          Child    : System.Address) return Interfaces.C.Strings.chars_ptr;
+          Child    : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_notebook_get_menu_label_text");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Notebook), Get_Object (Child)));
@@ -352,7 +366,7 @@ package body Gtk.Notebook is
    is
       function Internal
          (Notebook : System.Address;
-          Child    : System.Address) return Interfaces.C.Strings.chars_ptr;
+          Child    : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_notebook_get_tab_label_text");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Notebook), Get_Object (Child)));
@@ -620,12 +634,12 @@ package body Gtk.Notebook is
    is
       procedure Internal
          (Notebook   : System.Address;
-          Group_Name : Interfaces.C.Strings.chars_ptr);
+          Group_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_notebook_set_group_name");
-      Tmp_Group_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Group_Name : Gtkada.Types.Chars_Ptr;
    begin
       if Group_Name = "" then
-         Tmp_Group_Name := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Group_Name := Gtkada.Types.Null_Ptr;
       else
          Tmp_Group_Name := New_String (Group_Name);
       end if;
@@ -663,9 +677,9 @@ package body Gtk.Notebook is
       procedure Internal
          (Notebook  : System.Address;
           Child     : System.Address;
-          Menu_Text : Interfaces.C.Strings.chars_ptr);
+          Menu_Text : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_notebook_set_menu_label_text");
-      Tmp_Menu_Text : Interfaces.C.Strings.chars_ptr := New_String (Menu_Text);
+      Tmp_Menu_Text : Gtkada.Types.Chars_Ptr := New_String (Menu_Text);
    begin
       Internal (Get_Object (Notebook), Get_Object (Child), Tmp_Menu_Text);
       Free (Tmp_Menu_Text);
@@ -767,9 +781,9 @@ package body Gtk.Notebook is
       procedure Internal
          (Notebook : System.Address;
           Child    : System.Address;
-          Tab_Text : Interfaces.C.Strings.chars_ptr);
+          Tab_Text : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_notebook_set_tab_label_text");
-      Tmp_Tab_Text : Interfaces.C.Strings.chars_ptr := New_String (Tab_Text);
+      Tmp_Tab_Text : Gtkada.Types.Chars_Ptr := New_String (Tab_Text);
    begin
       Internal (Get_Object (Notebook), Get_Object (Child), Tmp_Tab_Text);
       Free (Tmp_Tab_Text);

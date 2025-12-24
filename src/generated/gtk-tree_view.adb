@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -28,9 +28,7 @@ with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
-pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
-pragma Warnings(On);
+with Gtkada.Types;               use Gtkada.Types;
 
 package body Gtk.Tree_View is
 
@@ -45,7 +43,7 @@ package body Gtk.Tree_View is
    function C_Gtk_Tree_View_Insert_Column_With_Data_Func
       (Tree_View : System.Address;
        Position  : Glib.Gint;
-       Title     : Interfaces.C.Strings.chars_ptr;
+       Title     : Gtkada.Types.Chars_Ptr;
        Cell      : System.Address;
        Func      : System.Address;
        Data      : System.Address;
@@ -249,7 +247,7 @@ package body Gtk.Tree_View is
    function Internal_Gtk_Tree_View_Search_Equal_Func
       (Model       : Gtk.Tree_Model.Gtk_Tree_Model;
        Column      : Glib.Gint;
-       Key         : Interfaces.C.Strings.chars_ptr;
+       Key         : Gtkada.Types.Chars_Ptr;
        Iter        : access Gtk.Tree_Model.Gtk_Tree_Iter;
        Search_Data : System.Address) return Glib.Gboolean;
    pragma Convention (C, Internal_Gtk_Tree_View_Search_Equal_Func);
@@ -354,7 +352,7 @@ package body Gtk.Tree_View is
    function Internal_Gtk_Tree_View_Search_Equal_Func
       (Model       : Gtk.Tree_Model.Gtk_Tree_Model;
        Column      : Glib.Gint;
-       Key         : Interfaces.C.Strings.chars_ptr;
+       Key         : Gtkada.Types.Chars_Ptr;
        Iter        : access Gtk.Tree_Model.Gtk_Tree_Iter;
        Search_Data : System.Address) return Glib.Gboolean
    is
@@ -1400,7 +1398,7 @@ package body Gtk.Tree_View is
        Func      : Gtk_Tree_Cell_Data_Func;
        Dnotify   : Glib.G_Destroy_Notify_Address) return Glib.Gint
    is
-      Tmp_Title  : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title  : Gtkada.Types.Chars_Ptr := New_String (Title);
       Tmp_Return : Glib.Gint;
    begin
       if Func = null then
@@ -1436,7 +1434,7 @@ package body Gtk.Tree_View is
       --  straight mapping between the cell and the model. This is useful for
       --  customizing the cell renderer. For example, a function might get an
       --  integer from the Tree_Model, and render it to the "text" attribute of
-      --  "cell" by converting it to its written equivilent. This is set by
+      --  "cell" by converting it to its written equivalent. This is set by
       --  calling gtk_tree_view_column_set_cell_data_func
       --  "tree_column": A Gtk.Tree_View_Column.Gtk_Tree_View_Column
       --  "cell": The Gtk.Cell_Renderer.Gtk_Cell_Renderer that is being
@@ -1458,7 +1456,7 @@ package body Gtk.Tree_View is
           Data      : User_Data_Type;
           Dnotify   : Glib.G_Destroy_Notify_Address) return Glib.Gint
       is
-         Tmp_Title  : Interfaces.C.Strings.chars_ptr := New_String (Title);
+         Tmp_Title  : Gtkada.Types.Chars_Ptr := New_String (Title);
          Tmp_Return : Glib.Gint;
          D          : System.Address;
       begin
@@ -2336,7 +2334,7 @@ package body Gtk.Tree_View is
       function Internal_Cb
          (Model       : Gtk.Tree_Model.Gtk_Tree_Model;
           Column      : Glib.Gint;
-          Key         : Interfaces.C.Strings.chars_ptr;
+          Key         : Gtkada.Types.Chars_Ptr;
           Iter        : access Gtk.Tree_Model.Gtk_Tree_Iter;
           Search_Data : System.Address) return Glib.Gboolean;
       pragma Convention (C, Internal_Cb);
@@ -2358,7 +2356,7 @@ package body Gtk.Tree_View is
       function Internal_Cb
          (Model       : Gtk.Tree_Model.Gtk_Tree_Model;
           Column      : Glib.Gint;
-          Key         : Interfaces.C.Strings.chars_ptr;
+          Key         : Gtkada.Types.Chars_Ptr;
           Iter        : access Gtk.Tree_Model.Gtk_Tree_Iter;
           Search_Data : System.Address) return Glib.Gboolean
       is
@@ -2554,6 +2552,28 @@ package body Gtk.Tree_View is
    begin
       Internal (Get_Object (Tree_View));
    end Unset_Rows_Drag_Source;
+
+   ----------------
+   -- Get_Border --
+   ----------------
+
+   function Get_Border
+      (Self   : not null access Gtk_Tree_View_Record;
+       Border : access Gtk.Style.Gtk_Border) return Boolean
+   is
+      function Internal
+         (Self       : System.Address;
+          Acc_Border : access Gtk.Style.Gtk_Border) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_scrollable_get_border");
+      Acc_Border     : aliased Gtk.Style.Gtk_Border;
+      Tmp_Acc_Border : aliased Gtk.Style.Gtk_Border;
+      Tmp_Return     : Glib.Gboolean;
+   begin
+      Tmp_Return := Internal (Get_Object (Self), Tmp_Acc_Border'Access);
+      Acc_Border := Tmp_Acc_Border;
+      Border.all := Acc_Border;
+      return Tmp_Return /= 0;
+   end Get_Border;
 
    ---------------------
    -- Get_Hadjustment --

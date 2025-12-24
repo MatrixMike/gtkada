@@ -2,7 +2,7 @@
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -586,10 +586,10 @@ package Gtkada.Canvas_View is
      (Self : not null access Canvas_Item_Record)
      return Boolean is (False);
    function Inner_Most_Item
-     (Self     : not null access Canvas_Item_Record;
-      At_Point : Model_Point;
-      Context  : Draw_Context)
-      return Abstract_Item is (Self);
+     (Self           : not null access Canvas_Item_Record;
+      Dummy_At_Point : Model_Point;
+      Dummy_Context  : Draw_Context)
+      return Abstract_Item is (Abstract_Item (Self));
    overriding function Position
      (Self : not null access Canvas_Item_Record) return Gtkada.Style.Point;
    overriding function Contains
@@ -668,6 +668,11 @@ package Gtkada.Canvas_View is
       Equivalent_Elements => "=",
       "="                 => "=");
 
+   function Get_Selected_Items
+     (Self : not null access Canvas_Model_Record) return Item_Sets.Set;
+   --  Return the currently selected items. If no item is selected, an empty
+   --  set is returned.
+
    procedure For_Each_Link
      (Self       : not null access Canvas_Model_Record;
       Callback   : not null access procedure
@@ -688,6 +693,18 @@ package Gtkada.Canvas_View is
    --  Append Item and all items and links related to Item (i.e. the links for
    --  which one of the ends is Item, and then the links to these links, and so
    --  on).
+
+   procedure From
+     (Self : not null access Canvas_Model_Record'Class;
+      Item : not null access Abstract_Item_Record'Class;
+      Set  : in out Item_Sets.Set);
+   --  Append all the items with a link coming from Item
+
+   procedure To
+     (Self : not null access Canvas_Model_Record'Class;
+      Item : not null access Abstract_Item_Record'Class;
+      Set  : in out Item_Sets.Set);
+   --  Append all the items with a link going to Item
 
    function Bounding_Box
      (Self   : not null access Canvas_Model_Record;
@@ -788,8 +805,8 @@ package Gtkada.Canvas_View is
    --  emitted.
 
    function Is_Selectable
-     (Self : not null access Canvas_Model_Record;
-      Item : not null access Abstract_Item_Record'Class)
+     (Self       : not null access Canvas_Model_Record;
+      Dummy_Item : not null access Abstract_Item_Record'Class)
       return Boolean is (True);
    --  Whether the given item is selectable. By default, all items are
    --  selectable.
@@ -1130,12 +1147,24 @@ package Gtkada.Canvas_View is
       Width_In_Inches, Height_In_Inches : Gdouble;
    end record;
 
-   A3_Portrait      : constant Page_Format := (11.7, 16.5);
-   A3_Landscape     : constant Page_Format := (16.5, 11.7);
-   A4_Portrait      : constant Page_Format := (8.3, 11.7);
-   A4_Landscape     : constant Page_Format := (11.7, 8.3);
-   Letter_Portrait  : constant Page_Format := (8.5, 11.0);
-   Letter_Landscape : constant Page_Format := (11.0, 8.5);
+   type Predefined_Page_Format_Type is
+     (A3_Portrait,
+      A3_Landscape,
+      A4_Portrait,
+      A4_Landscape,
+      Letter_Portrait,
+      Letter_Landscape);
+
+   function To_Page_Format
+     (Value : Predefined_Page_Format_Type) return Page_Format
+   is
+     (case Value is
+         when A3_Portrait => (11.7, 16.5),
+         when A3_Landscape => (16.5, 11.7),
+         when A4_Portrait => (8.3, 11.7),
+         when A4_Landscape => (11.7, 8.3),
+         when Letter_Portrait => (8.5, 11.0),
+         when Letter_Landscape => (11.0, 8.5));
 
    type Export_Format is (Export_PDF, Export_SVG, Export_PNG);
 
@@ -1245,6 +1274,21 @@ package Gtkada.Canvas_View is
    type Event_Details_Access is not null access all Canvas_Event_Details;
    --  This record describes high-level aspects of user interaction with the
    --  canvas.
+
+   Null_Canvas_Event_Details : constant Canvas_Event_Details :=
+     Canvas_Event_Details'
+       (Event_Type        => Custom,
+        Button            => 0,
+        State             => 0,
+        Key               => 0,
+        Root_Point        => (0.0, 0.0),
+        M_Point           => (0.0, 0.0),
+        Item              => null,
+        Toplevel_Item     => null,
+        T_Point           => (0.0, 0.0),
+        I_Point           => (0.0, 0.0),
+        Allowed_Drag_Area => (0.0, 0.0, 0.0, 0.0),
+        Allow_Snapping    => False);
 
    procedure Initialize_Details
      (Self    : not null access Canvas_View_Record'Class;
@@ -1980,16 +2024,16 @@ package Gtkada.Canvas_View is
      (Self : not null access Canvas_Link_Record)
      return Boolean is (False);
    overriding function Inner_Most_Item
-     (Self     : not null access Canvas_Link_Record;
-      At_Point : Model_Point;
-      Context  : Draw_Context)
-      return Abstract_Item is (Self);
+     (Self           : not null access Canvas_Link_Record;
+      Dummy_At_Point : Model_Point;
+      Dummy_Context  : Draw_Context)
+      return Abstract_Item is (Abstract_Item (Self));
    overriding function Parent
      (Self : not null access Canvas_Link_Record)
       return Abstract_Item is (null);
    overriding function Edit_Widget
-     (Self  : not null access Canvas_Link_Record;
-      View  : not null access Canvas_View_Record'Class)
+     (Self       : not null access Canvas_Link_Record;
+      Dummy_View : not null access Canvas_View_Record'Class)
       return Gtk.Widget.Gtk_Widget is (null);
    overriding procedure Set_Visibility_Threshold
      (Self      : not null access Canvas_Link_Record;

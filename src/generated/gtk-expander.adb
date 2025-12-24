@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Expander is
@@ -42,7 +42,7 @@ package body Gtk.Expander is
    -- Gtk_Expander_New --
    ----------------------
 
-   function Gtk_Expander_New (Label : UTF8_String) return Gtk_Expander is
+   function Gtk_Expander_New (Label : UTF8_String := "") return Gtk_Expander is
       Expander : constant Gtk_Expander := new Gtk_Expander_Record;
    begin
       Gtk.Expander.Initialize (Expander, Label);
@@ -66,7 +66,10 @@ package body Gtk.Expander is
    -- Gtk_New --
    -------------
 
-   procedure Gtk_New (Expander : out Gtk_Expander; Label : UTF8_String) is
+   procedure Gtk_New
+      (Expander : out Gtk_Expander;
+       Label    : UTF8_String := "")
+   is
    begin
       Expander := new Gtk_Expander_Record;
       Gtk.Expander.Initialize (Expander, Label);
@@ -91,15 +94,20 @@ package body Gtk.Expander is
 
    procedure Initialize
       (Expander : not null access Gtk_Expander_Record'Class;
-       Label    : UTF8_String)
+       Label    : UTF8_String := "")
    is
       function Internal
-         (Label : Interfaces.C.Strings.chars_ptr) return System.Address;
+         (Label : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_expander_new");
-      Tmp_Label  : Interfaces.C.Strings.chars_ptr := New_String (Label);
+      Tmp_Label  : Gtkada.Types.Chars_Ptr;
       Tmp_Return : System.Address;
    begin
       if not Expander.Is_Created then
+         if Label = "" then
+            Tmp_Label := Gtkada.Types.Null_Ptr;
+         else
+            Tmp_Label := New_String (Label);
+         end if;
          Tmp_Return := Internal (Tmp_Label);
          Free (Tmp_Label);
          Set_Object (Expander, Tmp_Return);
@@ -115,14 +123,14 @@ package body Gtk.Expander is
        Label    : UTF8_String := "")
    is
       function Internal
-         (Label : Interfaces.C.Strings.chars_ptr) return System.Address;
+         (Label : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_expander_new_with_mnemonic");
-      Tmp_Label  : Interfaces.C.Strings.chars_ptr;
+      Tmp_Label  : Gtkada.Types.Chars_Ptr;
       Tmp_Return : System.Address;
    begin
       if not Expander.Is_Created then
          if Label = "" then
-            Tmp_Label := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Label := Gtkada.Types.Null_Ptr;
          else
             Tmp_Label := New_String (Label);
          end if;
@@ -153,7 +161,7 @@ package body Gtk.Expander is
       (Expander : not null access Gtk_Expander_Record) return UTF8_String
    is
       function Internal
-         (Expander : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Expander : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_expander_get_label");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Expander)));
@@ -265,12 +273,12 @@ package body Gtk.Expander is
    is
       procedure Internal
          (Expander : System.Address;
-          Label    : Interfaces.C.Strings.chars_ptr);
+          Label    : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_expander_set_label");
-      Tmp_Label : Interfaces.C.Strings.chars_ptr;
+      Tmp_Label : Gtkada.Types.Chars_Ptr;
    begin
       if Label = "" then
-         Tmp_Label := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Label := Gtkada.Types.Null_Ptr;
       else
          Tmp_Label := New_String (Label);
       end if;

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
---                     Copyright (C) 2001-2018, AdaCore                     --
+--                     Copyright (C) 2001-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -31,11 +31,11 @@
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Strings.Hash;
 with Ada.Tags;
-with Cairo;
 with GNAT.Strings;
 with Glib;                use Glib;
 with Glib.Simple_Action;
 with Glib.Menu;
+with Glib.Object;
 with Glib.Xml_Int;
 with Glib.Values;
 with Gdk.Event;
@@ -48,6 +48,7 @@ with Gtk.Box;
 with Gtk.Container;
 with Gtk.Enums;
 with Gtk.Event_Box;
+with Gtk.Handlers;
 with Gtk.Image;
 with Gtk.Label;
 with Gtk.Menu;
@@ -59,6 +60,7 @@ with Gtk.Window;
 with Gtkada.Handlers;
 with Gtkada.Multi_Paned;
 with Pango.Font;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package Gtkada.MDI is
 
@@ -274,6 +276,11 @@ package Gtkada.MDI is
    --  Internal initialization function.
    --  See the section "Creating your own widgets" in the documentation.
 
+   procedure Change_Group
+     (Child : not null access MDI_Child_Record'Class;
+      Group : Child_Group);
+   --  Change the child's MDI group.
+
    type Child_Position is
      (Position_Automatic,
       Position_Bottom,
@@ -397,6 +404,15 @@ package Gtkada.MDI is
      (Child : not null access MDI_Child_Record'Class)
       return Tab_Orientation_Type;
    --  Return the child's tab orientation
+
+   function Get_Tab_Label
+     (Child : not null access MDI_Child_Record'Class)
+      return Gtk.Label.Gtk_Label;
+   --  Return the child's tab label
+
+   function Get_Child_Notebook
+     (Child : access MDI_Child_Record'Class) return Gtk.Notebook.Gtk_Notebook;
+   --  Return the notebook that directly contains Child
 
    function Get_Tooltip
      (Child : not null access MDI_Child_Record)
@@ -710,9 +726,15 @@ package Gtkada.MDI is
    ----------------------
 
    procedure Close_Child
-     (Child : not null access MDI_Child_Record'Class;
-      Force : Boolean := False);
+     (Child           : not null access MDI_Child_Record'Class;
+      Force           : Boolean := False;
+      Focus_Same_Area : Boolean := True);
    --  Same as Close, but applies directly to a MDI_Child.
+   --  If Focus_Same_Area is True, the focus will return to the previously
+   --  focused child in the same area / notebook as Child, and which is not
+   --  Child itself.
+   --  Otherwise, the focus will return to the previously focused child, no
+   --  matter its area/notebook.
 
    ---------------------------
    -- Reorganizing children --
@@ -735,6 +757,15 @@ package Gtkada.MDI is
    --  Put Child in the background.
    --  If the children are maximized, this selected the next page from the
    --  notebook.
+
+   procedure Give_Focus_To_Previous_Child
+     (Child          : access MDI_Child_Record'Class;
+      From_Same_Area : Boolean := True);
+   --  Give focus to the last child.
+   --  If From_Same_Area is True, it will return the previously focused child
+   --  in the same area / notebook as Child, and which is not Child itself.
+   --  Otherwise, it will return the previously focused child, no matter its
+   --  area/notebook.
 
    type Split_Mode is
      (Before, Before_Reuse,
@@ -1138,27 +1169,145 @@ package Gtkada.MDI is
    --
    --  </signals>
 
+   type Cb_Gtkada_MDI_Window_MDI_Child_Void is not null access procedure
+     (Self  : access MDI_Window_Record'Class;
+      Child : not null access MDI_Child_Record'Class);
+
+   type Cb_GObject_MDI_Child_Void is not null access procedure
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class);
+
    Signal_Child_Selected       : constant Signal_Name := "child_selected";
+   procedure On_Child_Selected
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Child_Selected
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Float_Child          : constant Signal_Name := "float_child";
+   procedure On_Float_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Float_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Child_Title_Changed  : constant Signal_Name := "child_title_changed";
+   procedure On_Child_Title_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Child_Title_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Child_Added          : constant Signal_Name := "child_added";
+   procedure On_Child_Added
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Child_Added
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Child_Removed        : constant Signal_Name := "child_removed";
+   procedure On_Child_Removed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Child_Removed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Child_Icon_Changed   : constant Signal_Name := "child_icon_changed";
+   procedure On_Child_Icon_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Child_Icon_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Delete_Event         : constant Signal_Name := "delete_event";
-   Signal_Selected             : constant Signal_Name := "selected";
+   procedure On_Delete_Event
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Delete_Event
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Unfloat_Child        : constant Signal_Name := "unfloat_child";
+   procedure On_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
    Signal_Before_Unfloat_Child : constant Signal_Name :=
      "before_unfloat_child";
+   procedure On_Before_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Before_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
+   Signal_Before_Destroy_Child : constant Signal_Name :=
+     "before_destroy_child";
+   procedure On_Before_Destroy_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Before_Destroy_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
+   Signal_Before_Remove_Child  : constant Signal_Name := "before_remove_child";
+   procedure On_Before_Remove_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False);
+   procedure On_Before_Remove_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False);
+
+   Signal_Selected             : constant Signal_Name := "selected";
    Signal_Perspective_Changed  : constant Signal_Name := "perspective_changed";
    Signal_Perspectives_Added   : constant Signal_Name := "perspectives_added";
    Signal_Children_Reorganized : constant Signal_Name :=
                                    "children_reorganized";
    Signal_Child_State_Changed  : constant Signal_Name := "child_state_changed";
-   Signal_Before_Destroy_Child : constant Signal_Name :=
-     "before_destroy_child";
-   Signal_Before_Remove_Child  : constant Signal_Name := "before_remove_child";
-   Signal_Maximize_Child       : constant Signal_Name :=
-     "double_click_child_tab";
+   Signal_Maximize_Child       : constant Signal_Name := "maximize_child";
+   Signal_Unmaximize           : constant Signal_Name := "unmaximize";
 
    procedure Child_Selected
       (Self  : not null access MDI_Window_Record'Class;
@@ -1228,7 +1377,11 @@ private
       Tab_Icon      : Gtk.Image.Gtk_Image;
       --  label used when child is in a notebook, null if not in a notebook
 
-      Icon_Name : GNAT.Strings.String_Access;
+      Icon_Name     : GNAT.Strings.String_Access;
+
+      Notebook_Before_Floating : Gtk.Notebook.Gtk_Notebook := null;
+      --  The original notebook of a floating child. Used to put the child
+      --  back in the same notebook when unfloating it.
    end record;
 
    type Child_Iterator (Group_By_Notebook : Boolean := False) is record
@@ -1348,16 +1501,30 @@ private
 
       --  Handling of Dnd
       Drag_Start_X, Drag_Start_Y : Gint;
-      In_Drag           : Drag_Status := No_Drag;
-      Dnd_Rectangle     : Gdk.Rectangle.Gdk_Rectangle;  --  Highlighted area
-      Old_Dnd_Position  : Child_Position := Position_Automatic;
 
-      Dnd_Rectangle_Real : Gdk.Rectangle.Gdk_Rectangle;
-      --  Area to redraw to delete the Dnd overlay window
+      In_Drag                    : Drag_Status := No_Drag;
+      --  The Dnd status
 
-      Dnd_Target        : Gdk.Gdk_Window;     --  The current target for DND
+      Dnd_Rectangle              : Gdk.Rectangle.Gdk_Rectangle;
+      --  the Dnd highlighted area (e.g: left side of notebook)
 
-      Dnd_Overlay : Cairo.Cairo_Surface := Cairo.Null_Surface;
+      Old_Dnd_Position           : Child_Position := Position_Automatic;
+      --  The old Dnd position (e.g: top side of notebook). Used to know if
+      --  we should refresh the Dnd overlay (and the message) or not.
+
+      Dnd_Parent_Rect    : Gdk.Rectangle.Gdk_Rectangle;
+      --  The area that corresponds to the Dnd target parent (e.g: parent
+      --  notebook)
+
+      Dnd_Area_Message   : Unbounded_String;
+      --  The message displayed when Dnd is being performed, indicating the
+      --  are where the MDI child will be dropped
+
+      Dnd_Handler_Id     : Gtk.Handlers.Handler_Id;
+      --  The Dnd overlay drawing handler
+
+      Dnd_Target         : Gdk.Gdk_Window;
+      --  The current target for DND
 
       Drag_Areas : Allowed_Areas;
       --  The allowed areas during a drag

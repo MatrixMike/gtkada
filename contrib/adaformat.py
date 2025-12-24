@@ -483,7 +483,7 @@ class UTF8(CType):
 
     def __init__(self):
         CType.__init__(self, "UTF8_String", "Glib.Properties.Property_String")
-        self.cparam = "Interfaces.C.Strings.chars_ptr"
+        self.cparam = "Gtkada.Types.Chars_Ptr"
         self.cleanup = "Free (%s);"
 
     def convert_from_c(self):
@@ -500,11 +500,12 @@ class UTF8(CType):
     def convert_from_c_add_with(self, pkg, specs=False):
         if pkg:
             pkg.add_with("Gtkada.Bindings", specs=specs)
+            pkg.add_with("Gtkada.Types", specs=specs)
 
     def convert_to_c(self, pkg=None):
         if self.allow_none:
             return 'if %(var)s = "" then %(tmp)s :=' \
-                + ' Interfaces.C.Strings.Null_Ptr; else'\
+                + ' Gtkada.Types.Null_Ptr; else'\
                 + ' %(tmp)s := New_String (%(var)s); end if;'
         else:
             return "New_String (%(var)s)"
@@ -512,7 +513,7 @@ class UTF8(CType):
     def add_with(self, pkg, specs=False):
         super(UTF8, self).add_with(pkg)
         if pkg:
-            pkg.add_with("Interfaces.C.Strings", specs=specs,
+            pkg.add_with("Gtkada.Types", specs=specs,
                          might_be_unused=True)
 
 
@@ -523,7 +524,7 @@ class SignalName(UTF8):
     def __init__(self):
         super(SignalName, self).__init__()
         self.set_ada_name("Glib.Signal_Name")
-        self.cparam = "Interfaces.C.Strings.chars_ptr"
+        self.cparam = "Gtkada.Types.Chars_Ptr"
 
     def convert_to_c(self, pkg=None):
         return "New_String (String (%(var)s))"
@@ -533,8 +534,8 @@ class UTF8_List(CType):
 
     def __init__(self):
         CType.__init__(self, "GNAT.Strings.String_List", "")
-        self.cparam = "Interfaces.C.Strings.chars_ptr_array"
-        self.cleanup = "GtkAda.Types.Free (%s);"
+        self.cparam = "Gtkada.Types.chars_ptr_array"
+        self.cleanup = "Gtkada.Types.Free (%s);"
 
     def convert_from_c(self):
         # Use a temporary variable to store the result of To_String_List,
@@ -554,18 +555,15 @@ class UTF8_List(CType):
                 "chars_ptr_array_access", conv)
 
     def record_field_type(self, pkg=None):
-        return "Interfaces.C.Strings.char_array_access"
+        return "Gtkada.Types.char_array_access"
 
     def convert_to_c(self, pkg=None):
-        if pkg:
-            pkg.add_with("GtkAda.Types", specs=False)
         return "From_String_List (%(var)s)"
 
     def add_with(self, pkg=None, specs=False):
         super(UTF8_List, self).add_with(pkg=pkg)
         if pkg:
             pkg.add_with("GNAT.Strings", specs=True)
-            pkg.add_with("Interfaces.C.Strings", specs=specs)
             pkg.add_with("Gtkada.Bindings", specs=specs, might_be_unused=True)
 
 
@@ -783,6 +781,14 @@ class AdaTypeArray(CType):
                 self.cparam,      # name of C type for out parameters
                 c)                # convert from previous line to Ada type
 
+    def record_field_type(self, pkg=None):
+        if self.isArray and self.array_fixed_size is not None:
+            return "%s (1 .. %s)" % (
+                self.as_ada_param(pkg=pkg),
+                self.array_fixed_size)
+        else:
+            return self.as_c_param(pkg=pkg)
+
 
 class AdaNaming(object):
 
@@ -831,7 +837,7 @@ class AdaNaming(object):
             return self.cname_to_adaname[cname]
         except KeyError:
             if warning_if_not_found and cname.lower().startswith("gtk_"):
-                print "Name quoted in doc has no Ada binding: %s" % cname
+                print("Name quoted in doc has no Ada binding: %s" % cname)
             self.cname_to_adaname[cname] = cname  # Display warning once only
             return cname
 
@@ -926,6 +932,9 @@ class AdaNaming(object):
             isArray = True
         elif name in ("array_of_gdouble", ):
             t = AdaTypeArray("gdouble")
+            isArray = True
+        elif name in ("array_of_gchar", ):
+            t = AdaTypeArray("gchar")
             isArray = True
         elif cname == "void":
             return None
@@ -1035,16 +1044,16 @@ def cleanup_doc(doc):
     # from the Gir file, and therefore no doc for the package. We can
     # now override it, unless it came from binding.xml
 
-    subp = re.compile("([\S_]+)\(\)")
+    subp = re.compile(r"([\S_]+)\(\)")
     doc = subp.sub(lambda x: naming.adamethod_name(x.group(1)), doc)
 
-    types = re.compile("#([\w_]+)")
+    types = re.compile(r"#([\w_]+)")
     doc = types.sub(replace_type, doc)
 
-    params = re.compile("@([\w_]+)")
+    params = re.compile(r"@([\w_]+)")
     doc = params.sub(lambda x: x.group(1).title(), doc)
 
-    enums = re.compile("%([A-Z][\w_]+)")
+    enums = re.compile(r"%([A-Z][\w_]+)")
     doc = enums.sub(lambda x: naming.adamethod_name(x.group(1)), doc)
 
     doc = doc.replace("<emphasis>", "*") \
@@ -1102,10 +1111,10 @@ def cleanup_doc(doc):
         .replace("<term>", "'") \
         .replace("</term>", "'")
 
-    doc = re.sub("<variablelist[^>]*>", "", doc)
-    doc = re.sub("<title>(.*?)</title>", r"\n\n== \1 ==\n\n", doc)
-    doc = re.sub("<refsect\d[^>]*>", "", doc)
-    doc = re.sub("</refsect\d>", "", doc)
+    doc = re.sub(r"<variablelist[^>]*>", "", doc)
+    doc = re.sub(r"<title>(.*?)</title>", r"\n\n== \1 ==\n\n", doc)
+    doc = re.sub(r"<refsect\d[^>]*>", "", doc)
+    doc = re.sub(r"</refsect\d>", "", doc)
 
     doc = doc.replace("<example>", "") \
              .replace("</example>", "") \
@@ -1197,40 +1206,40 @@ def indent_code(code, indent=3, addnewlines=True):
 
     if addnewlines:
         # Add newlines where needed, but preserve existing blank lines
-        body = re.sub(";(?!\s*\n)", ";\n", body)
-        body = re.sub("(?<!and )then(?!\s*\n)", "then\n", body)
-        body = re.sub("(?<!or )else(?!\s*\n)", "else\n", body)
-        body = re.sub("declare", "\ndeclare", body)
+        body = re.sub(r";(?!\s*\n)", ";\n", body)
+        body = re.sub(r"(?<!and )then(?!\s*\n)", "then\n", body)
+        body = re.sub(r"(?<!or )else(?!\s*\n)", "else\n", body)
+        body = re.sub(r"declare", "\ndeclare", body)
         body = re.sub(r"\bdo\b", "do\n", body)
-        body = re.sub("\n\s*\n+", "\n\n", body)
+        body = re.sub(r"\n\s*\n+", "\n\n", body)
 
     parent_count = 0
     result = ""
 
-    for l in body.splitlines():
-        if l.find("--") != -1:
-            eol_comment = l[l.find("--"):].strip()
-            l = l[:l.find("--")]
+    for line in body.splitlines():
+        if line.find("--") != -1:
+            eol_comment = line[line.find("--"):].strip()
+            line = line[:line.find("--")]
         else:
             eol_comment = ""
 
-        l = l.strip()
+        line = line.strip()
 
-        if l.startswith("end") \
-           or l.startswith("elsif")  \
-           or l.startswith("else")  \
-           or l.startswith("begin") \
-           or l.startswith("}"):   # for C
+        if line.startswith("end") \
+           or line.startswith("elsif")  \
+           or line.startswith("else")  \
+           or line.startswith("begin") \
+           or line.startswith("}"):   # for C
             indent -= 3
 
         old_parent = parent_count
-        parent_count = parent_count + l.count("(") - l.count(")")
+        parent_count = parent_count + line.count("(") - line.count(")")
 
-        if not l:
+        if not line:
             if eol_comment:
                 result += " " * indent
 
-        elif l[0] == '(':
+        elif line[0] == '(':
             result += " " * (indent + 2)
             if parent_count > old_parent:
                 indent += (parent_count - old_parent) * 3
@@ -1246,23 +1255,23 @@ def indent_code(code, indent=3, addnewlines=True):
         if old_parent > parent_count:
             indent -= (old_parent - parent_count) * 3
 
-        result += l + eol_comment + "\n"
+        result += line + eol_comment + "\n"
 
-        if (l.endswith("then") and not l.endswith("and then")) \
-           or l.endswith("loop") \
-           or(l.endswith("else") and not l.endswith("or else"))\
-           or l.endswith("begin") \
-           or l.endswith("{") \
-           or l.endswith("record") \
-           or l.endswith("is") \
-           or l.endswith("do") \
-           or l.endswith("declare"):
+        if (line.endswith("then") and not line.endswith("and then")) \
+           or line.endswith("loop") \
+           or (line.endswith("else") and not line.endswith("or else"))\
+           or line.endswith("begin") \
+           or line.endswith("{") \
+           or line.endswith("record") \
+           or line.endswith("is") \
+           or line.endswith("do") \
+           or line.endswith("declare"):
             indent += 3
 
         # Case of generic instantiation:
         #     package A is
         #         new B ();
-        if l.startswith("new"):
+        if line.startswith("new"):
             indent -= 3
 
     return result
@@ -1350,11 +1359,13 @@ class Local_Var(object):
 
 class Parameter(Local_Var):
     __slots__ = ["name", "type", "default", "aliased", "mode", "doc",
-                 "ada_binding", "for_function", "is_temporary_variable"]
+                 "ada_binding", "for_function", "is_temporary_variable",
+                 "c_mode", "ownership", "is_caller_allocates"]
 
     def __init__(self, name, type, default="", doc="", mode="in",
                  for_function=False, ada_binding=True,
-                 is_temporary_variable=False):
+                 is_temporary_variable=False, c_mode="in", ownership="none",
+                 is_caller_allocates=False):
         """
            'mode' is the mode for the Ada subprogram, and is automatically
               converted when generating a subprogram as a direct C import.
@@ -1369,6 +1380,13 @@ class Parameter(Local_Var):
            :param is_temporary_variable: True if this parameter represents a
               local variable. In this case, we can sometimes avoid creating
               other such variables, a minor optimization.
+
+           :param 'c_mode' is the original mode of parameter in C
+
+           :param 'ownership' means that caller should free memory if 'full'
+
+           :param is_caller_allocates: True if memory for the parameter should
+              be allocated by method caller
         """
         assert mode in ("in", "out", "in out", "not null access",
                         "access"), "Incorrect mode: %s" % mode
@@ -1379,6 +1397,9 @@ class Parameter(Local_Var):
         self.ada_binding = ada_binding
         self.for_function = for_function
         self.is_temporary_variable = is_temporary_variable
+        self.c_mode = c_mode
+        self.ownership = ownership
+        self.is_caller_allocates = is_caller_allocates
 
     def _type(self, lang, pkg):
         mode = self.mode
@@ -1901,7 +1922,7 @@ class Section(object):
 
         iscode = False
 
-        if isinstance(obj, str) or isinstance(obj, unicode):
+        if isinstance(obj, bytes) or isinstance(obj, str):
             obj = Code(obj)
             iscode = True
         elif isinstance(obj, Package):
@@ -1939,7 +1960,7 @@ class Section(object):
                 if not in_spec:
                     continue
 
-                if isinstance(obj, Code) or isinstance(obj, unicode):
+                if isinstance(obj, Code) or isinstance(obj, str):
                     code.append([obj])
 
                 elif isinstance(obj, Subprogram) or isinstance(obj, Package):
@@ -2013,7 +2034,7 @@ class Section(object):
                     add_newline = (hasattr(obj, "add_newline") and
                                    obj.add_newline)
 
-                elif isinstance(obj, unicode):
+                elif isinstance(obj, str):
                     print("Not adding unicode to package: %s\n" % (
                         obj.encode('UTF-8'), ))
 
@@ -2111,8 +2132,13 @@ class Package(object):
         if type(pkg) == str:
             pkg = [pkg]
         for p in pkg:
-            if p.lower() == self.name.lower():
-                continue   # No dependence on self
+            def sublist(sub, parent):
+                """return a non-empty list if sub is not a sublist of parent"""
+                return [elem for elem in sub if elem not in parent]
+            l_name = self.name.lower().split(".")
+            l_p_name = p.lower().split(".")
+            if not sublist(l_p_name, l_name):
+                continue   # Already imported by construction
 
             p_info = (
                 do_use or self.spec_withs.get(p, False),   # do_use
@@ -2139,7 +2165,7 @@ class Package(object):
             # sort so that all packages for which 'might_be_unused' is True
             # are last in the list
 
-            for w in sorted(withs.keys(),
+            for w in sorted(list(withs.keys()),
                             key=lambda w: 'zz%s' % w if withs[w][1] else w):
                 do_use, might_be_unused = withs[w]
 
@@ -2202,6 +2228,7 @@ class Package(object):
             if self.doc:
                 result.append(format_doc(self.doc, indent=""))
 
+            result.append('')
             result.append('pragma Warnings (Off, "*is already use-visible*");')
             result.append(self._output_withs(self.spec_withs))
 
@@ -2213,8 +2240,7 @@ class Package(object):
             result.append(indent + "   %s" % self.formal_params)
         result.append(indent + "package %s is\n" % self.name)
 
-        self.sections.sort(lambda x, y: cmp(self.section_order(x.name),
-                                            self.section_order(y.name)))
+        self.sections.sort(key=lambda x: (self.section_order(x.name)))
 
         for s in self.sections:
             sec = s.spec(pkg=self, indent=indent + "   ")

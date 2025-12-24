@@ -2,7 +2,7 @@
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,9 +24,8 @@
 
 with Ada.Numerics;                       use Ada.Numerics;
 with Ada.Numerics.Generic_Elementary_Functions;
-with Interfaces.C.Strings;               use Interfaces.C.Strings;
 with System;
-with Unchecked_Deallocation;
+with Ada.Unchecked_Deallocation;
 with GNAT.IO;                            use GNAT.IO;
 
 with Cairo;                              use Cairo;
@@ -61,6 +60,7 @@ with Gtk.Widget;                         use Gtk.Widget;
 
 with Gtkada.Bindings;                    use Gtkada.Bindings;
 with Gtkada.Handlers;                    use Gtkada.Handlers;
+with Interfaces.C.Strings;               use Interfaces.C.Strings;
 
 with Pango.Font;                         use Pango.Font;
 with Pango.Layout;                       use Pango.Layout;
@@ -74,7 +74,6 @@ package body Gtkada.Canvas is
      Ada.Numerics.Generic_Elementary_Functions (Gdouble);
    use Double_Elementary_Functions;
 
-   use type Gdk.Gdk_Window;
    use type System.Address;
 
    Traces : constant Boolean := False;
@@ -105,7 +104,7 @@ package body Gtkada.Canvas is
    --  used to make the canvas still usable when there are lots of links to a
    --  given item.
 
-   Signals : constant chars_ptr_array :=
+   Signals : constant Interfaces.C.Strings.chars_ptr_array :=
                (1 => New_String (String (Signal_Background_Click)),
                 2 => New_String (String (Signal_Item_Selected)),
                 3 => New_String (String (Signal_Zoomed)),
@@ -126,7 +125,7 @@ package body Gtkada.Canvas is
    --  reuse the callbacks in Gtkada.Handlers, and thus save a lot of space
    --  in the GtkAda library.
 
-   procedure Free is new Unchecked_Deallocation (String, String_Access);
+   procedure Free is new Ada.Unchecked_Deallocation (String, String_Access);
 
    package Canvas_Timeout is
      new Glib.Main.Generic_Sources (Interactive_Canvas);
@@ -1605,7 +1604,7 @@ package body Gtkada.Canvas is
       type Range_Array is array (Positive range <>) of Graph_Range;
       type Range_Array_Access is access all Range_Array;
 
-      procedure Free is new Unchecked_Deallocation
+      procedure Free is new Ada.Unchecked_Deallocation
         (Range_Array, Range_Array_Access);
 
       Free_Ranges : Range_Array_Access := new Range_Array (1 .. 1000);

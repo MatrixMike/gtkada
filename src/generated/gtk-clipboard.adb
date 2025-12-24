@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 with Gtkada.C;                   use Gtkada.C;
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 
 package body Gtk.Clipboard is
 
@@ -234,7 +234,7 @@ package body Gtk.Clipboard is
    procedure Internal_Gtk_Clipboard_Rich_Text_Received_Func
       (Clipboard : System.Address;
        Format    : Gdk.Types.Gdk_Atom;
-       Text      : Interfaces.C.Strings.chars_ptr;
+       Text      : Gtkada.Types.Chars_Ptr;
        Length    : Gsize;
        Data      : System.Address);
    pragma Convention (C, Internal_Gtk_Clipboard_Rich_Text_Received_Func);
@@ -259,7 +259,7 @@ package body Gtk.Clipboard is
 
    procedure Internal_Gtk_Clipboard_Text_Received_Func
       (Clipboard : System.Address;
-       Text      : Interfaces.C.Strings.chars_ptr;
+       Text      : Gtkada.Types.Chars_Ptr;
        Data      : System.Address);
    pragma Convention (C, Internal_Gtk_Clipboard_Text_Received_Func);
    --  "clipboard": the Gtk.Clipboard.Gtk_Clipboard
@@ -314,7 +314,7 @@ package body Gtk.Clipboard is
    procedure Internal_Gtk_Clipboard_Rich_Text_Received_Func
       (Clipboard : System.Address;
        Format    : Gdk.Types.Gdk_Atom;
-       Text      : Interfaces.C.Strings.chars_ptr;
+       Text      : Gtkada.Types.Chars_Ptr;
        Length    : Gsize;
        Data      : System.Address)
    is
@@ -346,7 +346,7 @@ package body Gtk.Clipboard is
 
    procedure Internal_Gtk_Clipboard_Text_Received_Func
       (Clipboard : System.Address;
-       Text      : Interfaces.C.Strings.chars_ptr;
+       Text      : Gtkada.Types.Chars_Ptr;
        Data      : System.Address)
    is
       Func               : constant Gtk_Clipboard_Text_Received_Func := To_Gtk_Clipboard_Text_Received_Func (Data);
@@ -414,6 +414,21 @@ package body Gtk.Clipboard is
    begin
       return Get_User_Data (Internal (Get_Object (Clipboard)), Stub_GObject);
    end Get_Owner;
+
+   -------------------
+   -- Get_Selection --
+   -------------------
+
+   function Get_Selection
+      (Clipboard : not null access Gtk_Clipboard_Record)
+       return Gdk.Types.Gdk_Atom
+   is
+      function Internal
+         (Clipboard : System.Address) return Gdk.Types.Gdk_Atom;
+      pragma Import (C, Internal, "gtk_clipboard_get_selection");
+   begin
+      return Internal (Get_Object (Clipboard));
+   end Get_Selection;
 
    ----------------------
    -- Request_Contents --
@@ -557,10 +572,10 @@ package body Gtk.Clipboard is
    is
       procedure Internal
          (Clipboard : System.Address;
-          Text      : Interfaces.C.Strings.chars_ptr;
+          Text      : Gtkada.Types.Chars_Ptr;
           Len       : Glib.Gint);
       pragma Import (C, Internal, "gtk_clipboard_set_text");
-      Tmp_Text : Interfaces.C.Strings.chars_ptr := New_String (Text);
+      Tmp_Text : Gtkada.Types.Chars_Ptr := New_String (Text);
    begin
       Internal (Get_Object (Clipboard), Tmp_Text, -1);
       Free (Tmp_Text);
@@ -617,7 +632,7 @@ package body Gtk.Clipboard is
       (Clipboard : not null access Gtk_Clipboard_Record) return UTF8_String
    is
       function Internal
-         (Clipboard : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Clipboard : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_clipboard_wait_for_text");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Clipboard)));
@@ -725,6 +740,21 @@ package body Gtk.Clipboard is
    begin
       return Gtk.Clipboard.Gtk_Clipboard (Get_User_Data (Internal (Selection), Stub_Gtk_Clipboard));
    end Get;
+
+   -----------------
+   -- Get_Default --
+   -----------------
+
+   function Get_Default
+      (Display : not null access Gdk.Display.Gdk_Display_Record'Class)
+       return Gtk_Clipboard
+   is
+      function Internal (Display : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_clipboard_get_default");
+      Stub_Gtk_Clipboard : Gtk_Clipboard_Record;
+   begin
+      return Gtk.Clipboard.Gtk_Clipboard (Get_User_Data (Internal (Get_Object (Display)), Stub_Gtk_Clipboard));
+   end Get_Default;
 
    ---------------------
    -- Get_For_Display --

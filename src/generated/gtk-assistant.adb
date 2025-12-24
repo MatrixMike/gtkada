@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Assistant is
@@ -221,6 +221,23 @@ package body Gtk.Assistant is
       return Internal (Get_Object (Assistant), Get_Object (Page)) /= 0;
    end Get_Page_Complete;
 
+   --------------------------
+   -- Get_Page_Has_Padding --
+   --------------------------
+
+   function Get_Page_Has_Padding
+      (Assistant : not null access Gtk_Assistant_Record;
+       Page      : not null access Gtk.Widget.Gtk_Widget_Record'Class)
+       return Boolean
+   is
+      function Internal
+         (Assistant : System.Address;
+          Page      : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_assistant_get_page_has_padding");
+   begin
+      return Internal (Get_Object (Assistant), Get_Object (Page)) /= 0;
+   end Get_Page_Has_Padding;
+
    ---------------------------
    -- Get_Page_Header_Image --
    ---------------------------
@@ -268,7 +285,7 @@ package body Gtk.Assistant is
    is
       function Internal
          (Assistant : System.Address;
-          Page      : System.Address) return Interfaces.C.Strings.chars_ptr;
+          Page      : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_assistant_get_page_title");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Assistant), Get_Object (Page)));
@@ -484,6 +501,24 @@ package body Gtk.Assistant is
       Internal (Get_Object (Assistant), Get_Object (Page), Boolean'Pos (Complete));
    end Set_Page_Complete;
 
+   --------------------------
+   -- Set_Page_Has_Padding --
+   --------------------------
+
+   procedure Set_Page_Has_Padding
+      (Assistant   : not null access Gtk_Assistant_Record;
+       Page        : not null access Gtk.Widget.Gtk_Widget_Record'Class;
+       Has_Padding : Boolean)
+   is
+      procedure Internal
+         (Assistant   : System.Address;
+          Page        : System.Address;
+          Has_Padding : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_assistant_set_page_has_padding");
+   begin
+      Internal (Get_Object (Assistant), Get_Object (Page), Boolean'Pos (Has_Padding));
+   end Set_Page_Has_Padding;
+
    ---------------------------
    -- Set_Page_Header_Image --
    ---------------------------
@@ -532,9 +567,9 @@ package body Gtk.Assistant is
       procedure Internal
          (Assistant : System.Address;
           Page      : System.Address;
-          Title     : Interfaces.C.Strings.chars_ptr);
+          Title     : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_assistant_set_page_title");
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Get_Object (Assistant), Get_Object (Page), Tmp_Title);
       Free (Tmp_Title);

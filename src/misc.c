@@ -3,12 +3,12 @@
 --               GtkAda - Ada95 binding for Gtk+/Gnome               --
 --                                                                   --
 --   Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet   --
---                Copyright (C) 2000-2018, AdaCore                   --
+--                Copyright (C) 2000-2022, AdaCore                   --
 --                                                                   --
 -- This library is free software; you can redistribute it and/or     --
 -- modify it under the terms of the GNU General Public               --
 -- License as published by the Free Software Foundation; either      --
--- version 2 of the License, or (at your option) any later version.  --
+-- version 3 of the License, or (at your option) any later version.  --
 --                                                                   --
 -- This library is distributed in the hope that it will be useful,   --
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of    --
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
+#include <glib/gspawn.h>
 #include <pango/pango.h>
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
@@ -79,61 +80,6 @@ ada_gtk_micro_version ()
 /********************************************************************
  **  wrappers for functions which vary on Windows
  ********************************************************************/
-
-gchar *
-ada_g_filename_from_uri (const gchar *uri,
-			 gchar **hostname,
-			 GError **error) {
-#ifdef GDK_WINDOWING_WIN32
-  return g_filename_from_uri_utf8 (uri, hostname, error);
-#else
-  return g_filename_from_uri (uri, hostname, error);
-#endif
-}
-
-gchar *
-ada_g_filename_from_utf8 (const gchar *utf8string,
-		      gssize len,
-		      gsize *bytes_read,
-		      gsize *bytes_written,
-			  GError **error)
-{
-#ifdef GDK_WINDOWING_WIN32
-  return g_filename_from_utf8_utf8
-    (utf8string, len, bytes_read, bytes_written, error);
-#else
-  return g_filename_from_utf8
-    (utf8string, len, bytes_read, bytes_written, error);
-#endif
-}
-
-gchar *
-ada_g_filename_to_uri (const gchar *filename,
-		       const gchar *hostname,
-		       GError **error)
-{
-#ifdef GDK_WINDOWING_WIN32
-  return g_filename_to_uri_utf8 (filename, hostname, error);
-#else
-  return g_filename_to_uri (filename, hostname, error);
-#endif
-}
-
-gchar *
-ada_g_filename_to_utf8 (const gchar *opsysstring,
-			gssize len,
-			gsize *bytes_read,
-			gsize *bytes_written,
-			GError **error)
-{
-#ifdef GDK_WINDOWING_WIN32
-  return g_filename_to_utf8_utf8
-    (opsysstring, len, bytes_read, bytes_written, error);
-#else
-  return g_filename_to_utf8
-    (opsysstring, len, bytes_read, bytes_written, error);
-#endif
-}
 
 GdkPixbuf *
 ada_gdk_pixbuf_new_from_file (const char *filename,
@@ -2135,6 +2081,87 @@ ada_gtk_setup_application(GtkApplication *app, GtkadaApplicationFlags flags)
 #endif
 }
 
+/* Wrappers for gspawn */
+gboolean gnat_spawn_async (const gchar           *working_directory,
+                           gchar                **argv,
+                           gchar                **envp,
+                           GSpawnFlags            flags,
+                           GSpawnChildSetupFunc   child_setup,
+                           gpointer               user_data,
+                           GPid                  *child_pid,
+                           GError               **error) {
+  return g_spawn_async
+    (working_directory, argv, envp, flags, child_setup, user_data,
+     child_pid, error);
+ }
+
+gboolean gnat_spawn_async_with_pipes (const gchar          *working_directory,
+                                      gchar               **argv,
+                                      gchar               **envp,
+                                      GSpawnFlags           flags,
+                                      GSpawnChildSetupFunc  child_setup,
+                                      gpointer              user_data,
+                                      GPid                 *child_pid,
+                                      gint                 *standard_input,
+                                      gint                 *standard_output,
+                                      gint                 *standard_error,
+                                      GError              **error) {
+  return g_spawn_async_with_pipes
+    (working_directory, argv, envp, flags, child_setup, user_data, child_pid,
+     standard_input, standard_output, standard_error, error);
+}
+
+gboolean gnat_spawn_async_with_fds (const gchar          *working_directory,
+                                    gchar               **argv,
+                                    gchar               **envp,
+                                    GSpawnFlags           flags,
+                                    GSpawnChildSetupFunc  child_setup,
+                                    gpointer              user_data,
+                                    GPid                 *child_pid,
+                                    gint                  stdin_fd,
+                                    gint                  stdout_fd,
+                                    gint                  stderr_fd,
+                                    GError              **error) {
+  return g_spawn_async_with_fds
+    (working_directory, argv, envp, flags, child_setup, user_data,
+     child_pid, stdin_fd, stdout_fd, stderr_fd, error);
+}
+
+gboolean gnat_spawn_sync      (const gchar          *working_directory,
+                               gchar               **argv,
+                               gchar               **envp,
+                               GSpawnFlags           flags,
+                               GSpawnChildSetupFunc  child_setup,
+                               gpointer              user_data,
+                               gchar               **standard_output,
+                               gchar               **standard_error,
+                               gint                 *exit_status,
+                               GError              **error) {
+  return g_spawn_sync
+    (working_directory, argv, envp, flags, child_setup, user_data,
+     standard_output, standard_error, exit_status, error);
+}
+
+gboolean gnat_spawn_command_line_sync (const gchar          *command_line,
+                                       gchar               **standard_output,
+                                       gchar               **standard_error,
+                                       gint                 *exit_status,
+                                       GError              **error) {
+  return g_spawn_command_line_sync
+    (command_line, standard_output, standard_error, exit_status, error);
+}
+
+gboolean gnat_spawn_command_line_async (const gchar          *command_line,
+                                        GError              **error) {
+  return g_spawn_command_line_async (command_line, error);
+}
+
+/* gutils.h */
+const gchar * glib_get_home_dir () {
+  return g_get_home_dir ();
+}
+
+/* constants */
 const GVariantType* ada_gvariant_type_boolean = G_VARIANT_TYPE_BOOLEAN;
 const GVariantType* ada_gvariant_type_byte    = G_VARIANT_TYPE_BYTE;
 const GVariantType* ada_gvariant_type_int16   = G_VARIANT_TYPE_INT16;

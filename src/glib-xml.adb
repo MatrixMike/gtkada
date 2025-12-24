@@ -2,7 +2,7 @@
 --               GtkAda - Ada95 binding for the Gimp Toolkit                --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -657,7 +657,6 @@ package body Glib.XML is
 
    procedure Print (N : Node_Ptr; File_Name : String := "") is
       Success : Boolean;
-      pragma Unreferenced (Success);
    begin
       Print (N, File_Name, Success);
    end Print;
@@ -994,7 +993,8 @@ package body Glib.XML is
       procedure Free_Node (N : in out Node_Ptr);
       --  Free the memory for a node, but doesn't remove it from its parent
 
-      procedure Unchecked_Free is new Unchecked_Deallocation (Node, Node_Ptr);
+      procedure Unchecked_Free is
+        new Ada.Unchecked_Deallocation (Node, Node_Ptr);
 
       ---------------
       -- Free_Node --

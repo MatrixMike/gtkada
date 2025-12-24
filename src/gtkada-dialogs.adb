@@ -2,7 +2,7 @@
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 1998-2018, AdaCore                     --
+--                     Copyright (C) 1998-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,44 +22,46 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Strings;       use Ada.Strings;
-with Ada.Strings.Fixed; use Ada.Strings.Fixed;
+with Ada.Strings;         use Ada.Strings;
+with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 
-with Gdk.Event;         use Gdk.Event;
-with Gdk.Pixbuf;        use Gdk.Pixbuf;
-with Gdk.Window;        use Gdk.Window;
+with Gdk.Event;           use Gdk.Event;
+with Gdk.Pixbuf;          use Gdk.Pixbuf;
+with Gdk.Window;          use Gdk.Window;
 
-with Glib;              use Glib;
+with Glib;                use Glib;
 
-with Gtk.Box;           use Gtk.Box;
-with Gtk.Image;         use Gtk.Image;
-with Gtk.Label;         use Gtk.Label;
-with Gtk.Widget;        use Gtk.Widget;
+with Gtk.Box;             use Gtk.Box;
+with Gtk.Image;           use Gtk.Image;
+with Gtk.Label;           use Gtk.Label;
+with Gtk.Widget;          use Gtk.Widget;
 
-with Gtkada.Intl;       use Gtkada.Intl;
-with Gtkada.Pixmaps;    use Gtkada.Pixmaps;
+with Gtkada.Intl;         use Gtkada.Intl;
+with Gtkada.Pixmaps;      use Gtkada.Pixmaps;
+with Gtkada.Stock_Labels;
 
 package body Gtkada.Dialogs is
 
-   subtype String_6 is String (1 .. 6);
+   subtype String_16 is String (1 .. 16);
    type String_Const_Ptr is access constant String;
 
-   Dialog_Button_String : constant array (Button_Range) of String_6 :=
-     ("Yes   ",
-      "No    ",
-      "All   ",
-      "OK    ",
-      "Cancel",
-      "Abort ",
-      "Retry ",
-      "Ignore",
-      "Help  ");
+   Dialog_Button_String : constant array (Button_Range) of String_16 :=
+     ("Yes             ",
+      "No              ",
+      "All             ",
+      "OK              ",
+      "Cancel          ",
+      "Abort           ",
+      "Retry           ",
+      "Ignore          ",
+      "Help            ",
+      "Don't Show Again");
 
-   Yes    : aliased constant String := "gtk-yes";
-   No     : aliased constant String := "gtk-no";
-   Ok     : aliased constant String := "gtk-ok";
-   Cancel : aliased constant String := "gtk-cancel";
-   Help   : aliased constant String := "gtk-help";
+   Yes    : aliased constant String := Gtkada.Stock_Labels.Stock_Yes;
+   No     : aliased constant String := Gtkada.Stock_Labels.Stock_No;
+   Ok     : aliased constant String := Gtkada.Stock_Labels.Stock_Ok;
+   Cancel : aliased constant String := Gtkada.Stock_Labels.Stock_Cancel;
+   Help   : aliased constant String := "Help";
 
    --  ??? We used to reference Gtk.Stock.Stock_* instead, but there is
    --  apparently a bug in GCC when generating 'Access to these variables.
@@ -73,7 +75,8 @@ package body Gtkada.Dialogs is
       null,
       null,
       null,
-      Help'Access);
+      Help'Access,
+      null);
 
    --------------------
    -- Message_Dialog --
@@ -87,7 +90,8 @@ package body Gtkada.Dialogs is
       Help_Msg       : UTF8_String := "";
       Title          : UTF8_String := "";
       Justification  : Gtk_Justification := Justify_Center;
-      Parent         : Gtk.Window.Gtk_Window := null)
+      Parent         : Gtk.Window.Gtk_Window := null;
+      Icon_Name      : String := "")
       return Message_Dialog_Buttons
    is
       Dialog   : constant Gtk_Dialog := Create_Gtk_Dialog
@@ -95,7 +99,8 @@ package body Gtkada.Dialogs is
          Dialog_Type   => Dialog_Type,
          Title         => Title,
          Justification => Justification,
-         Parent        => Parent);
+         Parent        => Parent,
+         Icon_Name     => Icon_Name);
       Button   : Gtk_Widget;
       Result   : Message_Dialog_Buttons;
       Response : Gtk_Response_Type;
@@ -172,13 +177,14 @@ package body Gtkada.Dialogs is
 
             case Result is
                when Button_Yes
-                    | Button_No
-                    | Button_All
-                    | Button_OK
-                    | Button_Cancel
-                    | Button_Abort
-                    | Button_Retry
-                    | Button_Ignore =>
+                  | Button_No
+                  | Button_All
+                  | Button_OK
+                  | Button_Cancel
+                  | Button_Abort
+                  | Button_Retry
+                  | Button_Ignore
+                  | Button_Dont_Show_Again =>
 
                   Destroy (Dialog);
                   return Result;
@@ -209,14 +215,49 @@ package body Gtkada.Dialogs is
       Dialog_Type   : Message_Dialog_Type := Information;
       Title         : UTF8_String := "";
       Justification : Gtk_Justification := Justify_Center;
-      Parent        : Gtk.Window.Gtk_Window := null)
+      Parent        : Gtk.Window.Gtk_Window := null;
+      Icon_Name     : String := "")
       return Gtk.Dialog.Gtk_Dialog
    is
       Dialog      : Gtk_Dialog;
       Label       : Gtk_Label;
       Box         : Gtk_Box;
-      Img         : Gtk_Image;
-      Pixmap      : Gdk_Pixbuf;
+      Icon_Img    : Gtk_Image;
+
+      procedure Create_Dialog_Icon;
+
+      ------------------------
+      -- Create_Dialog_Icon --
+      ------------------------
+
+      procedure Create_Dialog_Icon is
+         Pixmap   : Gdk_Pixbuf;
+      begin
+         if Icon_Name /= "" then
+            Gtk_New_From_Icon_Name
+              (Icon_Img,
+               Icon_Name => Icon_Name,
+               Size      => Icon_Size_Dialog);
+         else
+            Pixmap :=
+              (case Dialog_Type is
+                  when Warning      =>
+                    Gdk_New_From_Xpm_Data (Warning_Xpm),
+                  when Error        =>
+                    Gdk_New_From_Xpm_Data (Error_Xpm),
+                  when Information  =>
+                    Gdk_New_From_Xpm_Data (Information_Xpm),
+                  when Confirmation =>
+                    Gdk_New_From_Xpm_Data (Confirmation_Xpm),
+                  when Custom       => null);
+            Gtk_New (Icon_Img, Pixmap);
+
+            --  Unref the pixmap since the Gtk_Image now holds its
+            --  own reference to it.
+
+            Pixmap.Unref;
+         end if;
+      end Create_Dialog_Icon;
 
    begin
       Gtk_New
@@ -232,25 +273,21 @@ package body Gtkada.Dialogs is
 
       case Dialog_Type is
          when Warning =>
-            Pixmap := Gdk.Pixbuf.Gdk_New_From_Xpm_Data (Warning_Xpm);
             if Title = "" then
                Set_Title (Dialog, -"Warning");
             end if;
 
          when Error =>
-            Pixmap := Gdk.Pixbuf.Gdk_New_From_Xpm_Data (Error_Xpm);
             if Title = "" then
                Set_Title (Dialog, -"Error");
             end if;
 
          when Information =>
-            Pixmap := Gdk.Pixbuf.Gdk_New_From_Xpm_Data (Information_Xpm);
             if Title = "" then
                Set_Title (Dialog, -"Information");
             end if;
 
          when Confirmation =>
-            Pixmap := Gdk.Pixbuf.Gdk_New_From_Xpm_Data (Confirmation_Xpm);
             if Title = "" then
                Set_Title (Dialog, -"Confirmation");
             end if;
@@ -262,9 +299,10 @@ package body Gtkada.Dialogs is
       Gtk_New_Hbox (Box);
       Pack_Start (Get_Content_Area (Dialog), Box, Padding => 10);
 
-      if Pixmap /= null then
-         Gtk_New (Img, Pixmap);
-         Pack_Start (Box, Img, Padding => 10);
+      Create_Dialog_Icon;
+
+      if Icon_Img /= null then
+         Pack_Start (Box, Icon_Img, Padding => 10);
       end if;
 
       Gtk_New (Label, Msg);

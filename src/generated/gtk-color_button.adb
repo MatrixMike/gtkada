@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Color_Button is
@@ -195,7 +195,7 @@ package body Gtk.Color_Button is
       (Button : not null access Gtk_Color_Button_Record) return UTF8_String
    is
       function Internal
-         (Button : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Button : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_color_button_get_title");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Button)));
@@ -241,9 +241,9 @@ package body Gtk.Color_Button is
    is
       procedure Internal
          (Button : System.Address;
-          Title  : Interfaces.C.Strings.chars_ptr);
+          Title  : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_color_button_set_title");
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Get_Object (Button), Tmp_Title);
       Free (Tmp_Title);
@@ -293,7 +293,7 @@ package body Gtk.Color_Button is
       (Self : not null access Gtk_Color_Button_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_actionable_get_action_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
@@ -376,14 +376,19 @@ package body Gtk.Color_Button is
 
    procedure Set_Action_Name
       (Self        : not null access Gtk_Color_Button_Record;
-       Action_Name : UTF8_String)
+       Action_Name : UTF8_String := "")
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_action_name");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr;
    begin
+      if Action_Name = "" then
+         Tmp_Action_Name := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Action_Name := New_String (Action_Name);
+      end if;
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
    end Set_Action_Name;
@@ -414,9 +419,9 @@ package body Gtk.Color_Button is
    is
       procedure Internal
          (Self                 : System.Address;
-          Detailed_Action_Name : Interfaces.C.Strings.chars_ptr);
+          Detailed_Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_detailed_action_name");
-      Tmp_Detailed_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Detailed_Action_Name);
+      Tmp_Detailed_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Detailed_Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Detailed_Action_Name);
       Free (Tmp_Detailed_Action_Name);

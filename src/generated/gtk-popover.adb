@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Popover is
@@ -141,18 +141,48 @@ package body Gtk.Popover is
       procedure Internal
          (Self             : System.Address;
           Model            : System.Address;
-          Action_Namespace : Interfaces.C.Strings.chars_ptr);
+          Action_Namespace : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_popover_bind_model");
-      Tmp_Action_Namespace : Interfaces.C.Strings.chars_ptr;
+      Tmp_Action_Namespace : Gtkada.Types.Chars_Ptr;
    begin
       if Action_Namespace = "" then
-         Tmp_Action_Namespace := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Action_Namespace := Gtkada.Types.Null_Ptr;
       else
          Tmp_Action_Namespace := New_String (Action_Namespace);
       end if;
       Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Model)), Tmp_Action_Namespace);
       Free (Tmp_Action_Namespace);
    end Bind_Model;
+
+   ----------------------
+   -- Get_Constrain_To --
+   ----------------------
+
+   function Get_Constrain_To
+      (Self : not null access Gtk_Popover_Record)
+       return Gtk.Enums.Gtk_Popover_Constraint
+   is
+      function Internal
+         (Self : System.Address) return Gtk.Enums.Gtk_Popover_Constraint;
+      pragma Import (C, Internal, "gtk_popover_get_constrain_to");
+   begin
+      return Internal (Get_Object (Self));
+   end Get_Constrain_To;
+
+   ------------------------
+   -- Get_Default_Widget --
+   ------------------------
+
+   function Get_Default_Widget
+      (Self : not null access Gtk_Popover_Record)
+       return Gtk.Widget.Gtk_Widget
+   is
+      function Internal (Self : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_popover_get_default_widget");
+      Stub_Gtk_Widget : Gtk.Widget.Gtk_Widget_Record;
+   begin
+      return Gtk.Widget.Gtk_Widget (Get_User_Data (Internal (Get_Object (Self)), Stub_Gtk_Widget));
+   end Get_Default_Widget;
 
    ---------------
    -- Get_Modal --
@@ -218,6 +248,71 @@ package body Gtk.Popover is
       return Gtk.Widget.Gtk_Widget (Get_User_Data (Internal (Get_Object (Self)), Stub_Gtk_Widget));
    end Get_Relative_To;
 
+   -----------------------------
+   -- Get_Transitions_Enabled --
+   -----------------------------
+
+   function Get_Transitions_Enabled
+      (Self : not null access Gtk_Popover_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_popover_get_transitions_enabled");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Transitions_Enabled;
+
+   -------------
+   -- Popdown --
+   -------------
+
+   procedure Popdown (Self : not null access Gtk_Popover_Record) is
+      procedure Internal (Self : System.Address);
+      pragma Import (C, Internal, "gtk_popover_popdown");
+   begin
+      Internal (Get_Object (Self));
+   end Popdown;
+
+   -----------
+   -- Popup --
+   -----------
+
+   procedure Popup (Self : not null access Gtk_Popover_Record) is
+      procedure Internal (Self : System.Address);
+      pragma Import (C, Internal, "gtk_popover_popup");
+   begin
+      Internal (Get_Object (Self));
+   end Popup;
+
+   ----------------------
+   -- Set_Constrain_To --
+   ----------------------
+
+   procedure Set_Constrain_To
+      (Self       : not null access Gtk_Popover_Record;
+       Constraint : Gtk.Enums.Gtk_Popover_Constraint)
+   is
+      procedure Internal
+         (Self       : System.Address;
+          Constraint : Gtk.Enums.Gtk_Popover_Constraint);
+      pragma Import (C, Internal, "gtk_popover_set_constrain_to");
+   begin
+      Internal (Get_Object (Self), Constraint);
+   end Set_Constrain_To;
+
+   ------------------------
+   -- Set_Default_Widget --
+   ------------------------
+
+   procedure Set_Default_Widget
+      (Self   : not null access Gtk_Popover_Record;
+       Widget : access Gtk.Widget.Gtk_Widget_Record'Class)
+   is
+      procedure Internal (Self : System.Address; Widget : System.Address);
+      pragma Import (C, Internal, "gtk_popover_set_default_widget");
+   begin
+      Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Widget)));
+   end Set_Default_Widget;
+
    ---------------
    -- Set_Modal --
    ---------------
@@ -279,6 +374,22 @@ package body Gtk.Popover is
    begin
       Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Relative_To)));
    end Set_Relative_To;
+
+   -----------------------------
+   -- Set_Transitions_Enabled --
+   -----------------------------
+
+   procedure Set_Transitions_Enabled
+      (Self                : not null access Gtk_Popover_Record;
+       Transitions_Enabled : Boolean)
+   is
+      procedure Internal
+         (Self                : System.Address;
+          Transitions_Enabled : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_popover_set_transitions_enabled");
+   begin
+      Internal (Get_Object (Self), Boolean'Pos (Transitions_Enabled));
+   end Set_Transitions_Enabled;
 
    use type System.Address;
 

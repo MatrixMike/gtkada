@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
---                     Copyright (C) 2001-2018, AdaCore                     --
+--                     Copyright (C) 2001-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -32,17 +32,18 @@
 --    on a per-child basis).
 --  - contextual menu in the title bar of children to dock them, float them,...
 
+with Interfaces.C.Strings;    use Interfaces.C.Strings;
+
 with Ada.Characters.Handling; use Ada.Characters.Handling;
-with Ada.Containers.Vectors;
 with Ada.Containers.Doubly_Linked_Lists;
-with Ada.Unchecked_Deallocation;
-with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
-with Ada.Tags;                use Ada.Tags;
+with Ada.Containers.Vectors;
 with Ada.Exceptions;          use Ada.Exceptions;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with Ada.Tags;                use Ada.Tags;
+with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with System;                  use System;
 with System.Address_Image;
-with Interfaces.C.Strings;    use Interfaces.C.Strings;
 
 with GNAT.IO;                 use GNAT.IO;
 with GNAT.Strings;            use GNAT.Strings;
@@ -84,7 +85,6 @@ with Gtk.Accel_Label;         use Gtk.Accel_Label;
 with Gtk.Application;         use Gtk.Application;
 with Gtk.Arguments;           use Gtk.Arguments;
 with Gtk.Box;                 use Gtk.Box;
-with Gtk.Button;              use Gtk.Button;
 with Gtk.Check_Menu_Item;     use Gtk.Check_Menu_Item;
 with Gtk.Css_Provider;        use Gtk.Css_Provider;
 with Gtk.Container;           use Gtk.Container;
@@ -93,7 +93,6 @@ with Gtk.Enums;               use Gtk.Enums;
 with Gtk.Event_Box;           use Gtk.Event_Box;
 with Gtk.Frame;               use Gtk.Frame;
 with Gtk.GEntry;              use Gtk.GEntry;
-with Gtk.Handlers;
 with Gtk.Image;               use Gtk.Image;
 with Gtk.Image_Menu_Item;     use Gtk.Image_Menu_Item;
 with Gtk.Label;               use Gtk.Label;
@@ -103,14 +102,20 @@ with Gtk.Menu_Item;           use Gtk.Menu_Item;
 with Gtk.Notebook;            use Gtk.Notebook;
 with Gtk.Radio_Menu_Item;     use Gtk.Radio_Menu_Item;
 with Gtk.Separator_Menu_Item; use Gtk.Separator_Menu_Item;
-with Gtk.Stock;               use Gtk.Stock;
 with Gtk.Style_Context;       use Gtk.Style_Context;
 with Gtk.Style_Provider;      use Gtk.Style_Provider;
 with Gtk.Window;              use Gtk.Window;
 
+with Gtkada.Bindings;         use Gtkada.Bindings;
 with Gtkada.Handlers;         use Gtkada.Handlers;
 with Gtkada.Multi_Paned;      use Gtkada.Multi_Paned;
+with Gtkada.Stock_Labels;     use Gtkada.Stock_Labels;
 with Gtkada.Style;
+
+pragma Warnings
+  (Off, "call to obsolescent procedure ""Get_Background_Color""");
+pragma Warnings (Off, "call to obsolescent procedure ""Popup""");
+--  Deprecated in Gtk+ 3.24
 
 package body Gtkada.MDI is
 
@@ -148,7 +153,7 @@ package body Gtkada.MDI is
    Child_Class_Record      : aliased Glib.Object.Ada_GObject_Class :=
      Glib.Object.Uninitialized_Class;
 
-   MDI_Signals : constant chars_ptr_array :=
+   MDI_Signals : constant Interfaces.C.Strings.chars_ptr_array :=
      (1 => New_String (String (Signal_Child_Selected)),
       2 => New_String (String (Signal_Float_Child)),
       3 => New_String (String (Signal_Child_Title_Changed)),
@@ -162,7 +167,7 @@ package body Gtkada.MDI is
       11 => New_String (String (Signal_Before_Destroy_Child)),
       12 => New_String (String (Signal_Perspectives_Added)));
 
-   Child_Signals : constant chars_ptr_array :=
+   Child_Signals : constant Interfaces.C.Strings.chars_ptr_array :=
      (1 => New_String (String (Signal_Float_Child)),
       2 => New_String (String (Signal_Unfloat_Child)),
       3 => New_String (String (Signal_Before_Unfloat_Child)),
@@ -170,7 +175,49 @@ package body Gtkada.MDI is
       5 => New_String (String (Signal_Child_State_Changed)),
       6 => New_String (String (Signal_Before_Destroy_Child)),
       7 => New_String (String (Signal_Before_Remove_Child)),
-      8 => New_String (String (Signal_Maximize_Child)));
+      8 => New_String (String (Signal_Maximize_Child)),
+      9 => New_String (String (Signal_Unmaximize)));
+
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_Gtkada_MDI_Window_MDI_Child_Void, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_Gtkada_MDI_Window_MDI_Child_Void);
+
+   function Cb_To_Address is new Ada.Unchecked_Conversion
+     (Cb_GObject_MDI_Child_Void, System.Address);
+   function Address_To_Cb is new Ada.Unchecked_Conversion
+     (System.Address, Cb_GObject_MDI_Child_Void);
+
+   procedure Connect
+     (Object  : access MDI_Window_Record'Class;
+      C_Name  : Glib.Signal_Name;
+      Handler : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After   : Boolean);
+
+   procedure Connect_Slot
+     (Object  : access MDI_Window_Record'Class;
+      C_Name  : Glib.Signal_Name;
+      Handler : Cb_GObject_MDI_Child_Void;
+      After   : Boolean;
+      Slot    : access Glib.Object.GObject_Record'Class := null);
+
+   procedure Marsh_GObject_MDI_Child_Void
+     (Closure         : GClosure;
+      Return_Value    : Glib.Values.GValue;
+      N_Params        : Glib.Guint;
+      Params          : Glib.Values.C_GValues;
+      Invocation_Hint : System.Address;
+      User_Data       : System.Address);
+   pragma Convention (C, Marsh_GObject_MDI_Child_Void);
+
+   procedure Marsh_MDI_Window_MDI_Child_Void
+     (Closure         : GClosure;
+      Return_Value    : Glib.Values.GValue;
+      N_Params        : Glib.Guint;
+      Params          : Glib.Values.C_GValues;
+      Invocation_Hint : System.Address;
+      User_Data       : System.Address);
+   pragma Convention (C, Marsh_MDI_Window_MDI_Child_Void);
 
    use Widget_List;
 
@@ -337,6 +384,11 @@ package body Gtkada.MDI is
       Event    : Gdk.Event.Gdk_Event) return Boolean;
    --  Manage the contextual menu on tabs
 
+   procedure On_Notebook_Before_Floating_Destroy
+     (Slot : access Glib.Object.GObject_Record'Class);
+   --  Called when a notebook stored before floating a child is destroyed.
+   --  Used to avoid dangling pointers.
+
    function Hover_Tabs
      (N : MDI_Notebook; X_Root, Y_Root : Gdouble) return Boolean;
    --  Returns True if the given root coordinates are on top of the tabs area
@@ -433,9 +485,19 @@ package body Gtkada.MDI is
    --  In_Central is set to true if the Parent is inside the central area.
 
    procedure Draw_Dnd_Rectangle
-     (Child : access MDI_Child_Record'Class;
+     (Child     : access MDI_Child_Record'Class;
       Hide_Only : Boolean := False);
    --  Draw the DND rectangle
+
+   function Draw_DnD_Overlay
+     (Self : access Gtk_Widget_Record'Class;
+      Cr   : Cairo_Context) return Boolean;
+   --  Used to draw the Dnd overlay over the MDI when Dnd is active
+
+   procedure Remove_DnD_Overlay
+     (MDI    : not null access MDI_Window_Record'Class;
+      Redraw : Boolean := True);
+   --  Remove the DnD preview overlay, if any.
 
    procedure Update_Float_Menu (Child : access MDI_Child_Record'Class);
    --  Update the state of the "Float" menu item associated with child
@@ -464,18 +526,46 @@ package body Gtkada.MDI is
    --  Return the list of visible children in Vec.
 
    procedure Update_Menu_Model_List_Of_Children
-      (MDI : not null access MDI_Window_Record'Class);
-   procedure On_Child_Changed_Update_Menu
-      (Menu : access Gtk_Widget_Record'Class);
+     (MDI : not null access MDI_Window_Record'Class);
+   procedure Add_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class);
+   procedure Remove_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class);
+   procedure Update_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class);
+   procedure Recompute_Menu
+     (Menu : access Gtk_Widget_Record'Class);
    procedure On_Child_Selected_Update_Menu
-      (Item : access Gtk_Widget_Record'Class);
+     (Item : access Gtk_Widget_Record'Class);
    --  Update the contents of the menu with the list of children.
 
-   procedure Split_H_Cb (MDI   : access Gtk_Widget_Record'Class);
-   procedure Split_V_Cb (MDI   : access Gtk_Widget_Record'Class);
-   procedure Float_Cb   (MDI   : access GObject_Record'Class);
-   procedure Close_Cb   (MDI   : access Gtk_Widget_Record'Class);
-   procedure Focus_Cb   (Item  : access Gtk_Check_Menu_Item_Record'Class);
+   function Find_Child_Menu
+     (Menu  : access MDI_Menu_Record'Class;
+      Child : not null access MDI_Child_Record'Class)
+      return Menu_Item_For_Child;
+   --  Return the Menu of Child in MDI
+
+   procedure Internal_Add_Child_Menu
+     (Menu  : access MDI_Menu_Record'Class;
+      Child : not null access MDI_Child_Record'Class;
+      Group : in out Widget_SList.GSlist);
+   --  Add a menu for Child in Group of Menu
+
+   procedure Internal_Update_Menu_Content
+     (Child : access MDI_Child_Record'Class;
+      It    : not null access Gtk_Radio_Menu_Item_Record'Class);
+   --  Destroy and recreate the content of a Menu
+
+   procedure Split_H_Cb    (MDI  : access Gtk_Widget_Record'Class);
+   procedure Split_V_Cb    (MDI  : access Gtk_Widget_Record'Class);
+   procedure Maximize_Cb   (MDI  : access Gtk_Widget_Record'Class);
+   procedure Unmaximize_Cb (MDI  : access Gtk_Widget_Record'Class);
+   procedure Float_Cb      (MDI  : access GObject_Record'Class);
+   procedure Close_Cb      (MDI  : access Gtk_Widget_Record'Class);
+   procedure Focus_Cb      (Item : access Gtk_Check_Menu_Item_Record'Class);
    --  Callbacks for the menu
 
    procedure On_Action_Floating
@@ -527,11 +617,6 @@ package body Gtkada.MDI is
    procedure Give_Focus_To_Child (Child : MDI_Child);
    --  Give the focus to a specific MDI child
    --  You should never call Grab_Focus directly
-
-   procedure Give_Focus_To_Previous_Child
-     (Child : access MDI_Child_Record'Class);
-   --  Give focus to the last child in the same area/notebook as Child, and
-   --  which is not Child itself.
 
    function Matching_Children
      (MDI : access MDI_Window_Record'Class; Str : String)
@@ -678,7 +763,11 @@ package body Gtkada.MDI is
    package body Close_Button is separate;
 
    package Maximize_Action is
-      procedure On_Maximize_Child
+      function Is_Maximized_Mode
+        (MDI : access MDI_Window_Record'Class) return Boolean;
+      --  Return True if a child is currently maximized in MDI
+
+      procedure On_Toggle_Maximize
         (Child : access Gtk_Widget_Record'Class);
       --  Callback when the signal "double_click_child_tab" is sent
 
@@ -735,6 +824,18 @@ package body Gtkada.MDI is
          Widget_Callback.Emit_By_Name (Child, Signal_Child_State_Changed);
       end if;
    end Set_State;
+
+   ------------------------
+   -- Get_Child_Notebook --
+   ------------------------
+
+   function Get_Child_Notebook
+     (Child : access MDI_Child_Record'Class) return Gtk.Notebook.Gtk_Notebook
+   is
+      Notebook : constant MDI_Notebook := Get_Notebook (Child);
+   begin
+      return Gtk_Notebook (Notebook);
+   end Get_Child_Notebook;
 
    ------------------
    -- Get_Notebook --
@@ -798,7 +899,12 @@ package body Gtkada.MDI is
       Child : MDI_Child;
    begin
       Child := MDI_Child (Get_Nth_Page (N, Gint (Page)));
-      if Child /= null then
+
+      --  Avoid setting the focus child at this point when we are performing
+      --  a Drag'n'Drop operation: the focus will be set properly once it
+      --  has fully finished.
+
+      if Child /= null and then Child.MDI.In_Drag = No_Drag then
          Print_Debug ("Set_Focus_Child_Switch_Notebook_Page "
                       & Get_Title (Child));
          Set_Focus_Child (Child);
@@ -1539,8 +1645,10 @@ package body Gtkada.MDI is
       MDI.Title_Bar_Height :=
         2 + Get_Size (MDI.Title_Font) / Pango.Enums.Pango_Scale;
 
-      if MDI.Focus_Title_Color /= Focus_Title_Color
-        or MDI.Title_Bar_Color /= Title_Bar_Color
+      if (Focus_Title_Color /= Gdk.RGBA.Null_RGBA
+          and then MDI.Focus_Title_Color /= Focus_Title_Color)
+        or (Title_Bar_Color /= Gdk.RGBA.Null_RGBA
+            and then MDI.Title_Bar_Color /= Title_Bar_Color)
       then
          MDI.Focus_Title_Color := Focus_Title_Color;
          MDI.Title_Bar_Color := Title_Bar_Color;
@@ -1714,6 +1822,9 @@ package body Gtkada.MDI is
       --  destroyed when their parent container is destroyed, so we have
       --  nothing to do for them.
 
+      --  Make sure to disconnect the DnD draw handler, if any
+      Remove_DnD_Overlay (M, Redraw => False);
+
       while Tmp /= Null_List loop
          --  Get the next field first, since Destroy will actually destroy Tmp
 
@@ -1778,8 +1889,9 @@ package body Gtkada.MDI is
    -----------------
 
    procedure Close_Child
-     (Child : not null access MDI_Child_Record'Class;
-      Force : Boolean := False)
+     (Child           : not null access MDI_Child_Record'Class;
+      Force           : Boolean := False;
+      Focus_Same_Area : Boolean := True)
    is
       MDI   : constant MDI_Window := Child.MDI;
       Event : Gdk_Event;
@@ -1790,7 +1902,8 @@ package body Gtkada.MDI is
       --  can't send create the event anyway.
 
       Print_Debug ("Close_Child, " & Get_Title (Child) & " force="
-                   & Boolean'Image (Force));
+                   & Boolean'Image (Force) & " focus_same_parent="
+                   & Boolean'Image (Focus_Same_Area));
 
       Widget_Callback.Emit_By_Name (Child, Signal_Before_Remove_Child);
 
@@ -1835,8 +1948,12 @@ package body Gtkada.MDI is
             --  Transfer the focus before unfloating, so that the parent in
             --  which the child is unfloated (which might be random from the
             --  user's point of view) doesn't influence who gets the focus.
-            if MDI_Child (Child) = MDI.Focus_Child then
-               Give_Focus_To_Previous_Child (Child);
+            if MDI_Child_Record (Child.all)'Unchecked_Access
+              = MDI.Focus_Child
+            then
+               Give_Focus_To_Previous_Child
+                 (Child          => Child,
+                  From_Same_Area => Focus_Same_Area);
             end if;
 
             --  The call to Float_Child below will change the focus_child
@@ -1854,17 +1971,6 @@ package body Gtkada.MDI is
             Destroy (Child);
          end if;
       end if;
-
-   exception
-      when E : others =>
-         --  Silently ignore the exceptions for now, to avoid crashes.
-         --  The application using the MDI can not do it, since this callback
-         --  is called directly from the button in Initialize
-
-         if Traces then
-            Print_Debug ("Unexpected exception "
-                         & Exception_Information (E));
-         end if;
    end Close_Child;
 
    -------------------
@@ -2048,6 +2154,17 @@ package body Gtkada.MDI is
       end if;
    end Get_Tab_Orientation;
 
+   -------------------
+   -- Get_Tab_Label --
+   -------------------
+
+   function Get_Tab_Label
+     (Child : not null access MDI_Child_Record'Class)
+      return Gtk.Label.Gtk_Label is
+   begin
+      return Child.Tab_Label;
+   end Get_Tab_Label;
+
    ----------------------------------
    -- Button_Pressed_On_Title_Icon --
    ----------------------------------
@@ -2163,17 +2280,16 @@ package body Gtkada.MDI is
 
       Pointer_Ungrab (Time => 0);
 
+      Remove_DnD_Overlay (MDI, Redraw => True);
+
       case C.MDI.In_Drag is
          when In_Pre_Drag =>
-            Gtkada.Style.Delete_Overlay (C.MDI, C.MDI.Dnd_Overlay);
             Child_Drag_Finished (C);
 
          when In_Drag =>
             if C.MDI.Central /= null then
                Set_Border_Width (C.MDI.Central, 0);
             end if;
-
-            Gtkada.Style.Delete_Overlay (C.MDI, C.MDI.Dnd_Overlay);
 
             if Allow_Move then
                Get_Dnd_Target
@@ -2819,11 +2935,25 @@ package body Gtkada.MDI is
         (Child.Initial, Signal_Show, Child_Widget_Shown'Access, Child);
       Widget_Callback.Connect
         (Child, Signal_Maximize_Child,
-         Maximize_Action.On_Maximize_Child'Access);
+         Maximize_Action.On_Toggle_Maximize'Access);
+      Widget_Callback.Connect
+        (Child, Signal_Unmaximize,
+         Maximize_Action.On_Toggle_Maximize'Access);
       Widget_Callback.Connect
         (Child, Signal_Before_Remove_Child,
          Maximize_Action.On_Remove_Child'Access);
    end Initialize;
+
+   ------------------
+   -- Change_Group --
+   ------------------
+
+   procedure Change_Group
+     (Child : not null access MDI_Child_Record'Class;
+      Group : Child_Group) is
+   begin
+      Child.Group := Group;
+   end Change_Group;
 
    -------------------------
    -- Give_Focus_To_Child --
@@ -2850,7 +2980,8 @@ package body Gtkada.MDI is
    ----------------------------------
 
    procedure Give_Focus_To_Previous_Child
-     (Child : access MDI_Child_Record'Class)
+     (Child          : access MDI_Child_Record'Class;
+      From_Same_Area : Boolean := True)
    is
       Item : Widget_List.Glist;
       It   : MDI_Child;
@@ -2863,13 +2994,17 @@ package body Gtkada.MDI is
       while Item /= Widget_List.Null_List loop
          It := MDI_Child (Get_Data (Item));
 
-         if It.Get_Visible and then It /= MDI_Child (Child) then
+         if It.Get_Visible
+           and then Child /= null
+           and then It /= MDI_Child_Record (Child.all)'Unchecked_Access
+         then
             if Last = null then
                Last := It;
             end if;
 
-            if It.State = Child.State
-              and then Get_Parent (It) = Get_Parent (Child)
+            if not From_Same_Area
+              or else (It.State = Child.State
+                       and then  Get_Parent (It) = Get_Parent (Child))
             then
                Print_Debug ("Give_Focus_To_Previous_Child "
                             & Get_Title (It));
@@ -3300,11 +3435,16 @@ package body Gtkada.MDI is
       Widget : access Gtk.Widget.Gtk_Widget_Record'Class) return MDI_Child
    is
       Tmp : Widget_List.Glist;
+      Child_Widget : constant Gtk_Widget :=
+        (if Widget /= null then
+           Gtk_Widget_Record (Widget.all)'Unchecked_Access
+         else
+           null);
    begin
       Tmp := First (MDI.Items);
 
       while Tmp /= Null_List loop
-         if MDI_Child (Get_Data (Tmp)).Initial = Gtk_Widget (Widget) then
+         if MDI_Child (Get_Data (Tmp)).Initial = Child_Widget then
             return Insert_Child_If_Needed (MDI, MDI_Child (Get_Data (Tmp)));
          end if;
 
@@ -3462,7 +3602,7 @@ package body Gtkada.MDI is
    -----------------
 
    procedure Raise_Child
-     (Child : not null access MDI_Child_Record'Class;
+     (Child      : not null access MDI_Child_Record'Class;
       Give_Focus : Boolean := True)
    is
       Old_Focus     : constant MDI_Child := Child.MDI.Focus_Child;
@@ -3497,7 +3637,8 @@ package body Gtkada.MDI is
          --  Temporary fool the system, so that the child doesn't necessarily
          --  gain the focus. Otherwise, switching a notebook page gives the
          --  child the focus.
-         Child.MDI.Focus_Child := MDI_Child (Child);
+         Child.MDI.Focus_Child :=
+           MDI_Child_Record (Child.all)'Unchecked_Access;
 
          --  There could be no parent if we are in all-floating mode
          if Note /= null then
@@ -3514,6 +3655,35 @@ package body Gtkada.MDI is
         and then Give_Focus
         and then Child.Initial.Get_Realized
       then
+         --  When raising a floating child that has the Float_As_Transient
+         --  flag set to True, set it as transient for the current window
+         --  (i.e: the currently focused child's window if any or the MDI's
+         --  main window).
+         --  This ensures that the floating child will always be on top of
+         --  the currently focused window, which is what we want in the
+         --  Float_As_Transient mode.
+
+         if Old_Focus /= Child
+           and then (Child.Flags and Float_As_Transient) /= 0
+         then
+            declare
+               Child_Window : constant Gtk_Window :=
+                                Gtk_Window
+                                  (Child.Initial.Get_Toplevel);
+               New_Parent   : Gtk_Window := null;
+            begin
+               if Old_Focus = null then
+                  New_Parent := Gtk_Window (Child.MDI.Get_Toplevel);
+               else
+                  New_Parent := Gtk_Window (Old_Focus.Initial.Get_Toplevel);
+               end if;
+
+               if New_Parent /= null then
+                  Child_Window.Set_Transient_For (New_Parent);
+               end if;
+            end;
+         end if;
+
          Present (Gtk_Window (Get_Toplevel (Child.Initial)));
 
       elsif Child.Get_Realized then
@@ -3601,14 +3771,23 @@ package body Gtkada.MDI is
 
    procedure Set_Focus_Child (Child : not null access MDI_Child_Record) is
       Old : constant MDI_Child := Child.MDI.Focus_Child;
-      C   : constant MDI_Child := MDI_Child (Child);
+      C   : constant MDI_Child := Child.all'Unchecked_Access;
       Tmp : Boolean;
       pragma Unreferenced (Tmp);
 
       Previous_Focus_Child : constant MDI_Child := Child.MDI.Focus_Child;
+      Widget : constant Gtk_Widget :=
+        Gtk_Widget_Record (Child.all)'Unchecked_Access;
    begin
       if Child.MDI.Loading_Desktop then
          return;
+      end if;
+
+      if not Child.Is_Visible
+        and then Maximize_Action.Is_Maximized_Mode (Child.MDI)
+      then
+         --  The child is hidden of another maximized child, thus unmaximize
+         Widget_Callback.Emit_By_Name (Child, Signal_Unmaximize);
       end if;
 
       --  Be lazy. And avoid infinite loop when updating the MDI menu...
@@ -3622,7 +3801,7 @@ package body Gtkada.MDI is
       --  point (might be called because we insert the child in a notebook
       --  first for instance)
 
-      if Widget_List.Find (C.MDI.Items, Gtk_Widget (Child)) = Null_List then
+      if Widget_List.Find (C.MDI.Items, Widget) = Null_List then
          return;
       end if;
 
@@ -3645,8 +3824,8 @@ package body Gtkada.MDI is
       Update_Tab_Color (Get_Notebook (C), True);
 
       Ref (C);
-      Remove (C.MDI.Items, Gtk_Widget (Child));
-      Prepend (C.MDI.Items, Gtk_Widget (Child));
+      Remove (C.MDI.Items, Widget);
+      Prepend (C.MDI.Items, Widget);
       Unref (C);
 
       --  Make sure the page containing Child in a notebook is put on top.
@@ -3811,43 +3990,66 @@ package body Gtkada.MDI is
        Win       : out Gtk_Window;
        Container : out Gtk_Container)
    is
-      Parent : Gtk_Window := null;
-      Item   : Widget_List.Glist;
-      It     : MDI_Child;
+      function Get_Current_Floating_Child return MDI_Child;
+      --  If the current MDI child (i.e: the one that has the focus) is
+      --  floating and realized, return it. Return null otherwise.
+
+      --------------------------------
+      -- Get_Current_Floating_Child --
+      --------------------------------
+
+      function Get_Current_Floating_Child return MDI_Child
+      is
+         Children : Widget_List.Glist;
+         It       : MDI_Child;
+      begin
+         Children := Child.MDI.Items;
+         It := MDI_Child (Get_Data (Children));
+
+         if It /= null and then It /= MDI_Child (Child)
+           and then It.State = Floating
+              and then It.Initial.Get_Realized
+         then
+            return It;
+         else
+            return null;
+         end if;
+      end Get_Current_Floating_Child;
+
+      Parent                 : Gtk_Window := null;
+      Current_Floating_Child : constant MDI_Child :=
+                                 Get_Current_Floating_Child;
    begin
       Gtk_New (Win);
       Container := Gtk_Container (Win);
 
-      --  If the current child is floating, and the mode is
-      --  Float_As_Transient, we want to float the dialog as
-      --  transient for the current child.
+      --  If the mode is set to Float_To_Main, we want to float the dialog as
+      --  transient for the MDI's main window.
+      --
+      --  If the mode is set to Float_As_Transient , we want to float the
+      --  dialog as transient for the current child when floating or the main
+      --  window otherwise.
+      --
+      --  In any other case, we don't set any transient window.
 
-      if (Child.Flags and Float_As_Transient) /= 0 then
-         Item := Child.MDI.Items;
-         while Item /= Widget_List.Null_List loop
-            It := MDI_Child (Get_Data (Item));
-
-            if It /= MDI_Child (Child) then
-               if It.State = Floating
-                 and then It.Initial.Get_Realized
-               then
-                  Parent := Gtk_Window (Get_Toplevel (It.Initial));
-               else
-                  Parent := Gtk_Window (Get_Toplevel (Child.MDI));
-               end if;
-
-               exit;
-            end if;
-
-            Item := Widget_List.Next (Item);
-         end loop;
-      elsif (Child.Flags and Float_To_Main) /= 0 then
-         Parent := Gtk_Window (Get_Toplevel (Child.MDI));
+      if (Child.Flags and Float_To_Main) /= 0 then
+         Parent := Gtk_Window (Child.MDI.Get_Toplevel);
+      elsif (Child.Flags and Float_As_Transient) /= 0 then
+         if Current_Floating_Child /= null then
+            Parent := Gtk_Window (Current_Floating_Child.Initial.Get_Toplevel);
+         else
+            Parent := Gtk_Window (Child.MDI.Get_Toplevel);
+         end if;
       end if;
 
       if Parent /= null then
          Win.Set_Transient_For (Parent);
-         Win.Set_Destroy_With_Parent (True);
+
+         --  Set the window's type hint to dialog to avoid displaying the
+         --  minimize/maximize buttons: these buttons can lead to some strange
+         --  behavior when a window is set as transient to a parent one (e.g:
+         --  minimizing a window also minimizes the parent window on Windows).
+         Win.Set_Type_Hint (Window_Type_Hint_Dialog);
       end if;
    end Create_Float_Window_For_Child;
 
@@ -3914,6 +4116,16 @@ package body Gtkada.MDI is
 
          Ref (Child);
 
+         --  Store the original notebook of the child we want to float: we want
+         --  to put it back in the same notebook if the user unfloats it.
+
+         Child.Notebook_Before_Floating := Gtk_Notebook (Get_Notebook (Child));
+
+         if Child.Notebook_Before_Floating /= null then
+            Child.Notebook_Before_Floating.On_Destroy
+              (On_Notebook_Before_Floating_Destroy'Access, Slot => Child);
+         end if;
+
          --  This could be called before the child even has a parent if
          --  All_Floating_Mode is set.
 
@@ -3934,6 +4146,9 @@ package body Gtkada.MDI is
          --  lookup for instance in Find_MDI_Child_From_Widget.
 
          Child_User_Data.Set (Win, MDI_Child (Child), "parent_mdi_child");
+
+         --  Add the 'mdichild' CSS class to the newly created floating window
+         Get_Style_Context (Win).Add_Class ("mdichild");
 
          --  Set the accelerators for this window, so that menu key shortcuts
          --  behave the same as in the main window.
@@ -4027,7 +4242,10 @@ package body Gtkada.MDI is
          Set_State (Child, Normal);
          Destroy (Win);
 
-         Put_In_Notebook (Child.MDI, Child);
+         Put_In_Notebook
+           (MDI      => Child.MDI,
+            Child    => Child,
+            Notebook => MDI_Notebook (Child.Notebook_Before_Floating));
 
          Update_Float_Menu (Child);
 
@@ -4257,7 +4475,11 @@ package body Gtkada.MDI is
       elsif Get_Event_Type (Event) = Gdk_2button_Press
         and then Get_Button (Event) = 1
       then
-         Widget_Callback.Emit_By_Name (C, Signal_Maximize_Child);
+         if not Maximize_Action.Is_Maximized_Mode (C.MDI) then
+            Widget_Callback.Emit_By_Name (C, Signal_Maximize_Child);
+         else
+            Widget_Callback.Emit_By_Name (C, Signal_Unmaximize);
+         end if;
          return True;
 
       elsif Get_Button (Event) = 2 then
@@ -4267,6 +4489,18 @@ package body Gtkada.MDI is
       end if;
       return False;
    end On_Notebook_Button_Press;
+
+   -----------------------------------------
+   -- On_Notebook_Before_Floating_Destroy --
+   -----------------------------------------
+
+   procedure On_Notebook_Before_Floating_Destroy
+     (Slot : access Glib.Object.GObject_Record'Class)
+   is
+      Child : constant MDI_Child := MDI_Child (Slot);
+   begin
+      Child.Notebook_Before_Floating := null;
+   end On_Notebook_Before_Floating_Destroy;
 
    ----------------------
    -- Menu_Switch_Page --
@@ -4700,7 +4934,7 @@ package body Gtkada.MDI is
 
             Glib.Object.Initialize_Class_Record
               (Ancestor     => Gtk.Event_Box.Get_Type,
-               Signals      => (1 .. 0 => Null_Ptr),
+               Signals      => (1 .. 0 => Interfaces.C.Strings.Null_Ptr),
                Parameters   => (1 .. 0 => (1 => GType_None)),
                Class_Record => MDI_Tab_Class_Record,
                Type_Name    => "MDITab",
@@ -4748,11 +4982,7 @@ package body Gtkada.MDI is
 
          Note.Set_Tab_Label (Child, Event);
          Note.Set_Tab_Detachable (Child, False);
-
-         --  Disable reordering. Otherwise, we hit a bug in gtk 3.8 where the
-         --  display of the tabs is broken when the reorder operation ends up
-         --  being a drag of the view to another notebook (N408-003)
-         Note.Set_Tab_Reorderable (Child, False);
+         Note.Set_Tab_Reorderable (Child, True);
 
          Show_All (Event);
 
@@ -4932,7 +5162,7 @@ package body Gtkada.MDI is
             while List /= Widget_List.Null_List loop
                C := MDI_Child (Get_Data (List));
 
-               if In_Central_Area (MDI, C) then
+               if In_Central_Area (MDI, C) and then C.Group = Group then
                   Note := Get_Notebook (C);
                   Current := Note;
                   exit;
@@ -5361,6 +5591,44 @@ package body Gtkada.MDI is
            ("Unexpected exception: " & Exception_Information (E));
    end Split_V_Cb;
 
+   -----------------
+   -- Maximize_Cb --
+   -----------------
+
+   procedure Maximize_Cb (MDI : access Gtk_Widget_Record'Class)
+   is
+      Child : constant MDI_Child := MDI_Window (MDI).Focus_Child;
+   begin
+      if Child /= null
+        and then not Maximize_Action.Is_Maximized_Mode (MDI_Window (MDI))
+      then
+         Widget_Callback.Emit_By_Name (Child, Signal_Maximize_Child);
+      end if;
+   exception
+      when E : others =>
+         Print_Debug
+           ("Unexpected exception: " & Exception_Information (E));
+   end Maximize_Cb;
+
+   -------------------
+   -- Unmaximize_Cb --
+   -------------------
+
+   procedure Unmaximize_Cb (MDI : access Gtk_Widget_Record'Class)
+   is
+      Child : constant MDI_Child := MDI_Window (MDI).Focus_Child;
+   begin
+      if Child /= null
+        and then Maximize_Action.Is_Maximized_Mode (MDI_Window (MDI))
+      then
+         Widget_Callback.Emit_By_Name (Child, Signal_Unmaximize);
+      end if;
+   exception
+      when E : others =>
+         Print_Debug
+           ("Unexpected exception: " & Exception_Information (E));
+   end Unmaximize_Cb;
+
    ---------------------------------------
    -- On_Select_Child_Update_Close_Menu --
    ---------------------------------------
@@ -5390,6 +5658,14 @@ package body Gtkada.MDI is
       Focus : constant MDI_Child := C.MDI.Get_Focus_Child;
    begin
       C.MDI.Freeze_Float_Menu := True;
+
+      --  Update the child's tab color if the child has been unfloated
+      if Focus /= null and then Focus.State = Normal then
+         Update_Tab_Color
+           (Note    => Get_Notebook (Focus),
+            Focused => True);
+      end if;
+
       C.Set_Active (Focus /= null and then Focus.State = Floating);
       C.MDI.Freeze_Float_Menu := False;
    end On_Float_Child_Update_Menu;
@@ -5496,28 +5772,218 @@ package body Gtkada.MDI is
       It.Child.MDI.Internal_Updating_Menu := False;
    end On_Child_Selected_Update_Menu;
 
+   -----------------------------
+   -- Internal_Add_Child_Menu --
+   -----------------------------
+
+   procedure Internal_Add_Child_Menu
+     (Menu  : access MDI_Menu_Record'Class;
+      Child : not null access MDI_Child_Record'Class;
+      Group : in out Widget_SList.GSlist)
+   is
+      It : Gtk_Radio_Menu_Item;
+   begin
+      It := new Menu_Item_For_Child_Record'
+        (Gtk_Radio_Menu_Item_Record with Child => MDI_Child (Child));
+      Gtk.Radio_Menu_Item.Initialize (It, Group, "");
+      Group := It.Get_Group;
+
+      --  Insert the new child's menu item in alphabetical order
+
+      declare
+         Children  : Widget_List.Glist := Menu.Get_Children;
+         Idx       : Gint := 0;
+         Widget    : Gtk_Widget;
+         Menu_Item : Menu_Item_For_Child;
+      begin
+         while Children /= Null_List loop
+            Widget := Get_Data (Children);
+
+            if Widget.all in Menu_Item_For_Child_Record'Class then
+               Menu_Item := Menu_Item_For_Child (Widget);
+
+               exit when Short_Title_Less_Than
+                 (MDI_Child (Child), Menu_Item.Child);
+            end if;
+
+            Idx := Idx + 1;
+            Children := Next (Children);
+         end loop;
+
+         Free (Children);
+
+         Menu.Insert (It, Idx);
+      end;
+
+      Internal_Update_Menu_Content (Child, It);
+
+      It.On_Toggled (Focus_Cb'Access, After => True);
+      Widget_Callback.Object_Connect
+        (Menu.MDI, Signal_Child_Selected,
+         On_Child_Selected_Update_Menu'Access, It,
+         After => True);
+
+      It.Set_Accel_Path
+        (Child.MDI.Accel_Path_Prefix.all
+         & "/window/child/" & Child.Short_Title.all,
+         Child.MDI.Group);
+   end Internal_Add_Child_Menu;
+
    ----------------------------------
-   -- On_Child_Changed_Update_Menu --
+   -- Internal_Update_Menu_Content --
    ----------------------------------
 
-   procedure On_Child_Changed_Update_Menu
+   procedure Internal_Update_Menu_Content
+     (Child : access MDI_Child_Record'Class;
+      It    : not null access Gtk_Radio_Menu_Item_Record'Class)
+   is
+      Box   : Gtk_Box;
+      Label : Gtk_Accel_Label;
+      Icon  : Gtk_Image;
+   begin
+      It.Remove (It.Get_Child);
+
+      Gtk_New_Hbox (Box, Homogeneous => False, Spacing => 5);
+      It.Add (Box);
+
+      Icon := Get_Icon (Child);
+      if Icon /= null then
+         Box.Pack_Start (Icon, Expand => False);
+      end if;
+
+      Gtk_New (Label, Child.Short_Title.all);
+      Label.Set_Alignment (0.0, 0.5);
+      Label.Set_Accel_Widget (It);
+      Box.Pack_Start (Label, Expand => True, Fill => True);
+      It.Set_Active (Child = Child.MDI.Focus_Child);
+
+      --  Refresh graphically the menu
+      It.Show_All;
+   end Internal_Update_Menu_Content;
+
+   ---------------------
+   -- Find_Child_Menu --
+   ---------------------
+
+   function Find_Child_Menu
+     (Menu  : access MDI_Menu_Record'Class;
+      Child : not null access MDI_Child_Record'Class)
+      return Menu_Item_For_Child
+   is
+      Children, L : Widget_List.Glist;
+      W           : Gtk_Widget;
+   begin
+      Children := Menu.Get_Children;
+      L := Children;
+      while L /= Null_List loop
+         W := Get_Data (L);
+         L := Next (L);
+         if W.all in Menu_Item_For_Child_Record'Class then
+            declare
+               It : constant Menu_Item_For_Child := Menu_Item_For_Child (W);
+            begin
+               if It.Child = Child then
+                  return It;
+               end if;
+            end;
+         end if;
+      end loop;
+
+      return null;
+   end Find_Child_Menu;
+
+   --------------------
+   -- Add_Child_Menu --
+   --------------------
+
+   procedure Add_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class)
+   is
+      Menu        : constant MDI_Menu := MDI_Menu (Self);
+      G           : Widget_SList.GSlist := Widget_SList.Null_List;
+      Children, L : Widget_List.Glist;
+      W           : Gtk_Widget;
+   begin
+      Children := Menu.Get_Children;
+      L := Children;
+      while L /= Null_List loop
+         W := Get_Data (L);
+         L := Next (L);
+         if W.all in Menu_Item_For_Child_Record'Class then
+            G := Menu_Item_For_Child (W).Get_Group;
+            exit;
+         end if;
+      end loop;
+      Free (Children);
+
+      if Find_Child_Menu (Menu, Child) = null then
+         Internal_Add_Child_Menu (Menu, Child, G);
+      end if;
+   end Add_Child_Menu;
+
+   -----------------------
+   -- Remove_Child_Menu --
+   -----------------------
+
+   procedure Remove_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class)
+   is
+      Menu : constant MDI_Menu := MDI_Menu (Self);
+   begin
+      if Self = null then
+         return;
+      end if;
+
+      declare
+         It : constant Menu_Item_For_Child := Find_Child_Menu (Menu, Child);
+      begin
+         if It /= null then
+            It.Destroy;
+         end if;
+      end;
+   end Remove_Child_Menu;
+
+   -----------------------
+   -- Update_Child_Menu --
+   -----------------------
+
+   procedure Update_Child_Menu
+     (Self  : access Glib.Object.GObject_Record'Class;
+      Child : not null access MDI_Child_Record'Class)
+   is
+      Menu : constant MDI_Menu := MDI_Menu (Self);
+   begin
+      if Self = null then
+         return;
+      end if;
+
+      declare
+         It : constant Menu_Item_For_Child := Find_Child_Menu (Menu, Child);
+      begin
+         if It /= null then
+            Internal_Update_Menu_Content (Child, It);
+         end if;
+      end;
+   end Update_Child_Menu;
+
+   --------------------
+   -- Recompute_Menu --
+   --------------------
+
+   procedure Recompute_Menu
       (Menu : access Gtk_Widget_Record'Class)
    is
       M : constant MDI_Menu := MDI_Menu (Menu);
 
-      --  ??? Some code duplication with Update_Menu_Model_List_Of_Children,
-      --  but this code will be removed when we only support menu models.
       use Child_Vectors;
-      G      : Widget_SList.GSlist := Widget_SList.Null_List;
-      Vec    : Child_Vectors.Vector;
-      Curs   : Child_Vectors.Cursor;
-      Child  : MDI_Child;
-      It     : Gtk_Radio_Menu_Item;
-      Box    : Gtk_Box;
-      Label  : Gtk_Accel_Label;
+      G           : Widget_SList.GSlist := Widget_SList.Null_List;
+      Vec         : Child_Vectors.Vector;
+      Curs        : Child_Vectors.Cursor;
+      Child       : MDI_Child;
       Children, L : Widget_List.Glist;
-      W      : Gtk_Widget;
-      Icon   : Gtk_Image;
+      W           : Gtk_Widget;
    begin
       --  Remove all items
 
@@ -5539,45 +6005,12 @@ package body Gtkada.MDI is
       Curs := First (Vec);
       while Has_Element (Curs) loop
          Child := Element (Curs);
-
-         It := new Menu_Item_For_Child_Record'
-            (Gtk_Radio_Menu_Item_Record with Child => Child);
-         Gtk.Radio_Menu_Item.Initialize (It, G, "");
-         G := It.Get_Group;
-         M.Add (It);
-
-         It.Remove (It.Get_Child);
-
-         Gtk_New_Hbox (Box, Homogeneous => False, Spacing => 5);
-         It.Add (Box);
-
-         Icon := Get_Icon (Child);
-         if Icon /= null then
-            Box.Pack_Start (Icon, Expand => False);
-         end if;
-
-         Gtk_New (Label, Child.Short_Title.all);
-         Label.Set_Alignment (0.0, 0.5);
-         Label.Set_Accel_Widget (It);
-         Box.Pack_Start (Label, Expand => True, Fill => True);
-
-         It.Set_Active (Child = Child.MDI.Focus_Child);
-         It.On_Toggled (Focus_Cb'Access, After => True);
-         Widget_Callback.Object_Connect
-            (M.MDI, Signal_Child_Selected,
-             On_Child_Selected_Update_Menu'Access, It,
-             After => True);
-
-         It.Set_Accel_Path
-           (Child.MDI.Accel_Path_Prefix.all
-            & "/window/child/" & Child.Short_Title.all,
-            Child.MDI.Group);
-
+         Internal_Add_Child_Menu (M, Child, G);
          Next (Curs);
       end loop;
 
       M.Show_All;
-   end On_Child_Changed_Update_Menu;
+   end Recompute_Menu;
 
    ---------------------
    -- Set_Focus_Child --
@@ -5853,8 +6286,8 @@ package body Gtkada.MDI is
          Dialog : Gtk_Dialog;
          Label  : Gtk_Label;
          Ent    : Gtk_Entry;
-         Button : Gtk_Widget;
-         pragma Warnings (Off, Button);
+         Button : Gtk_Widget with Unreferenced;
+
       begin
          Gtk_New (Dialog, Title => "Enter perspective name",
                   Parent => Gtk_Window (Get_Toplevel (MDI)),
@@ -6094,6 +6527,7 @@ package body Gtkada.MDI is
          Menu := new MDI_Menu_Record;
          Menu.MDI := MDI_Window (MDI);
          Gtk.Menu.Initialize (Menu);
+         Menu.Set_Name ("gtkada-mdi-children-menu");
 
          Item := new MDI_Menu_Item_Record'
             (Gtk_Menu_Item_Record with
@@ -6113,6 +6547,12 @@ package body Gtkada.MDI is
 
          Gtk_New (Sep);
          Append (Menu, Sep);
+
+         Gtk_New (Item, "Maximize");
+         Connect_Menu (Item, Maximize_Cb'Access, "maximize_current_child");
+
+         Gtk_New (Item, "Unmaximize");
+         Connect_Menu (Item, Unmaximize_Cb'Access, "unmaximize_current_child");
 
          Check := new MDI_Check_Menu_Item_Record'
             (Gtk_Check_Menu_Item_Record with MDI => MDI_Window (MDI));
@@ -6142,22 +6582,13 @@ package body Gtkada.MDI is
          Gtk_New (Sep);
          Append (Menu, Sep);
 
-         On_Child_Changed_Update_Menu (Menu);
+         Recompute_Menu (Menu);
+         MDI.On_Child_Removed (Remove_Child_Menu'Access, Slot => Menu);
+         MDI.On_Child_Title_Changed (Add_Child_Menu'Access, Slot => Menu);
+         MDI.On_Child_Icon_Changed (Update_Child_Menu'Access, Slot => Menu);
+         MDI.On_Child_Title_Changed (Update_Child_Menu'Access, Slot => Menu);
          Widget_Callback.Object_Connect
-            (MDI, Signal_Child_Removed,
-             On_Child_Changed_Update_Menu'Access, Menu);
-         Widget_Callback.Object_Connect
-            (MDI, Signal_Child_Added,
-             On_Child_Changed_Update_Menu'Access, Menu);
-         Widget_Callback.Object_Connect
-            (MDI, Signal_Child_Icon_Changed,
-             On_Child_Changed_Update_Menu'Access, Menu);
-         Widget_Callback.Object_Connect
-            (MDI, Signal_Child_Title_Changed,
-             On_Child_Changed_Update_Menu'Access, Menu);
-         Widget_Callback.Object_Connect
-            (MDI, Signal_Perspective_Changed,
-             On_Child_Changed_Update_Menu'Access, Menu);
+            (MDI, Signal_Perspective_Changed, Recompute_Menu'Access, Menu);
 
          Show_All (Menu);
          return Gtk_Menu (Menu);
@@ -6827,7 +7258,6 @@ package body Gtkada.MDI is
                       & Gint'Image (Full_Height), Debug_Increase);
 
          MDI.Freeze_Focus;
-         declare
          begin
             while Child_Node /= null loop
                if Traces then
@@ -7363,15 +7793,24 @@ package body Gtkada.MDI is
 
                if Child.State = Floating then
                   declare
-                     Win : constant Gtk_Widget :=
-                       Get_Toplevel (Child.Initial);
+                     Win           : constant Gtk_Window :=
+                       Gtk_Window (Get_Toplevel (Child.Initial));
+                     X, Y          : Gint;
+                     Width, Height : Gint;
                   begin
-                     --  Note: This size doesn't include the size of the window
-                     --  decorations, doesn't seem to be a way to do this.
-                     Add (Child_Node, "height",
-                          Gint'Image (Win.Get_Allocated_Height));
-                     Add (Child_Node, "width",
-                          Gint'Image (Win.Get_Allocated_Width));
+                     Win.Get_Size (Width  => Width,
+                                   Height => Height);
+                     Add (Child_Node, "height", Gint'Image (Height));
+                     Add (Child_Node, "width", Gint'Image (Width));
+
+                     --  Save the floating window's coordinates
+
+                     Win.Get_Position
+                       (Root_X => X,
+                        Root_Y => Y);
+
+                     Add (Child_Node, "X", Gint'Image (X));
+                     Add (Child_Node, "Y", Gint'Image (Y));
                   end;
                end if;
 
@@ -7620,16 +8059,22 @@ package body Gtkada.MDI is
          --  Save the general configuration of the MDI
 
          declare
-            Win   : constant Gtk_Window := Gtk_Window (Get_Toplevel (MDI));
+            Win    : constant Gtk_Window :=
+              Gtk_Window (Get_Toplevel (MDI));
+            Width  : Gint;
+            Height : Gint;
          begin
             if Win /= null then
                if not Win.Is_Maximized and then Get_Window (Win) /= null then
+                  Win.Get_Size
+                    (Width  => Width,
+                     Height => Height);
                   Set_Attribute
                     (MDI.Perspectives, "width",
-                     Gint'Image (MDI.Get_Toplevel.Get_Allocated_Width));
+                     Gint'Image (Width));
                   Set_Attribute
                     (MDI.Perspectives, "height",
-                     Gint'Image (MDI.Get_Toplevel.Get_Allocated_Height));
+                     Gint'Image (Height));
                end if;
 
                Set_Attribute
@@ -7680,13 +8125,16 @@ package body Gtkada.MDI is
          end loop;
 
          if Has_Negative_Values then
+            --  In case of negative values, retrieve the old perspectives
+            --  But keep the current perspective as the active one
+
             declare
                N    : Node_Ptr := Old_Perspectives.Child;
                Name : constant String := Get_Attribute
                  (MDI.Current_Perspective, "name");
             begin
                while N /= null loop
-                  if Get_Attribute (N, "name") /= Name then
+                  if Get_Attribute (N, "name") = Name then
                      MDI.Current_Perspective := N;
                      exit;
                   end if;
@@ -7835,6 +8283,7 @@ package body Gtkada.MDI is
             --  If not found, and we already have a perspective => do nothing
 
             if MDI.Current_Perspective /= null then
+               MDI.Thaw_Focus;
                return;
             end if;
 
@@ -8428,143 +8877,108 @@ package body Gtkada.MDI is
       Widget.On_Button_Press_Event (Button_Pressed_Forced'Access, Child);
    end Set_Dnd_Source;
 
+   ----------------------
+   -- Draw_DnD_Overlay --
+   ----------------------
+
+   function Draw_DnD_Overlay
+     (Self : access Gtk_Widget_Record'Class;
+      Cr   : Cairo_Context) return Boolean
+   is
+      MDI                    : constant MDI_Window := MDI_Window (Self);
+      Color                  : Gdk_RGBA;
+      Layout                 : Pango_Layout;
+      Ink_Rect, Logical_Rect : Pango_Rectangle;
+      X, Y                   : Gdouble;
+      W, H                   : Gdouble;
+      Line_Width             : constant := 3.0;
+   begin
+      --  Adapt the color to make it more visible on the current theme
+      Color := Gtkada.Style.Shade_Or_Lighten (MDI.Title_Bar_Color, 0.1);
+
+      Color.Alpha := 0.5;
+      Set_Source_RGBA (Cr, Color);
+      Cairo.Rectangle
+        (Cr,
+         Gdouble (MDI.Dnd_Parent_Rect.X),
+         Gdouble (MDI.Dnd_Parent_Rect.Y),
+         Gdouble (MDI.Dnd_Parent_Rect.Width),
+         Gdouble (MDI.Dnd_Parent_Rect.Height));
+      Cairo.Fill (Cr);
+
+      Color.Alpha := 0.6;
+      Set_Source_RGBA (Cr, Color);
+
+      --  Offset here is to compensate the line width
+      Gtkada.Style.Rounded_Rectangle
+        (Cr,
+         Gdouble (MDI.Dnd_Rectangle.X) + Line_Width,
+         Gdouble (MDI.Dnd_Rectangle.Y) + Line_Width,
+         Gdouble (MDI.Dnd_Rectangle.Width) - 2.0 * Line_Width,
+         Gdouble (MDI.Dnd_Rectangle.Height) - 2.0 * Line_Width,
+         Radius => 8.0);
+      Cairo.Fill_Preserve (Cr);
+
+      Color.Alpha := 0.9;
+      Set_Source_RGBA (Cr, Color);
+      Set_Line_Width (Cr, 3.0);
+      Stroke (Cr);
+
+      Layout := MDI.Create_Pango_Layout;
+      Layout.Set_Markup
+        (ASCII.HT & To_String (MDI.Dnd_Area_Message)
+         & ASCII.LF & MDI.Dnd_Message.all);
+
+      Layout.Get_Extents (Ink_Rect, Logical_Rect);
+      W := Gdouble (Logical_Rect.Width / Pango_Scale);
+      H := Gdouble (Logical_Rect.Height / Pango_Scale);
+
+      X := Gdouble (MDI.Dnd_Rectangle.X) +
+        (Gdouble (MDI.Dnd_Rectangle.Width) - W) / 2.0;
+      Y := Gdouble (MDI.Dnd_Rectangle.Y) +
+        (Gdouble (MDI.Dnd_Rectangle.Height) - H) / 2.0;
+
+      --  Keep the text window within the MDI
+
+      X := Gdouble'Max (X, 0.0);
+      Y := Gdouble'Max (Y, 0.0);
+
+      X := Gdouble'Min (X, Gdouble (MDI.Get_Allocated_Width) - W);
+      Y := Gdouble'Min (Y, Gdouble (MDI.Get_Allocated_Height) - H);
+
+      --  Slightly lighter (and non-transparent) background for the msg.
+      Set_Line_Width (Cr, 1.0);
+      Set_Source_RGBA
+        (Cr, Gtkada.Style.Shade_Or_Lighten (Color, 0.2));
+      Gtkada.Style.Rounded_Rectangle
+        (Cr, X - 2.0, Y - 2.0, W + 4.0, H + 4.0, 4.0);
+      Cairo.Fill (Cr);
+
+      Get_Style_Context (MDI).Render_Layout (Cr, X, Y, Layout);
+      Unref (Layout);
+
+      return True;
+   end Draw_DnD_Overlay;
+
    ------------------------
    -- Draw_Dnd_Rectangle --
    ------------------------
 
    procedure Draw_Dnd_Rectangle
-     (Child : access MDI_Child_Record'Class;
+     (Child     : access MDI_Child_Record'Class;
       Hide_Only : Boolean := False)
    is
       MDI : constant MDI_Window := Child.MDI;
 
-      Current    : Gtk_Widget;
-      Position   : Child_Position;
-      New_Pos    : Gdk_Rectangle;
+      Current     : Gtk_Widget;
+      Position    : Child_Position;
+      New_Pos     : Gdk_Rectangle;
       Parent_Rect : Gdk_Rectangle;
-      Message    : Unbounded_String;
-      In_Central : Boolean;
-      C3         : MDI_Child;
-      Note       : Gtk_Notebook;
-      Allowed    : Boolean;
-
-      procedure Do_Draw (Cr : Cairo_Context; Draw : Boolean);
-      procedure Do_Draw (Cr : Cairo_Context; Draw : Boolean) is
-         Base_Color : Gdk_RGBA;
-         Color : Gdk_RGBA;
-         Layout : Pango_Layout;
-         Ink_Rect, Logical_Rect : Pango_Rectangle;
-         X, Y : Gdouble;
-         W, H : Gdouble;
-      begin
-         if Draw then
-            if not Allowed
-              or else Current = null
-            then
-               --  A future floating child ? Nothing to draw for now, and there
-               --  will be nothing to hide either.
-               MDI.Dnd_Rectangle_Real.Width := 0;
-               return;
-            end if;
-
-            if In_Central then
-               Base_Color := MDI.Focus_Title_Color;
-            else
-               Base_Color := (Red   => 1.0 - MDI.Focus_Title_Color.Red,
-                              Green => 1.0 - MDI.Focus_Title_Color.Green,
-                              Blue  => 1.0 - MDI.Focus_Title_Color.Blue,
-                              Alpha => 1.0);
-            end if;
-
-            Color := Base_Color;
-
-            Color.Alpha := 0.2;
-            Set_Source_RGBA (Cr, Color);
-            Cairo.Rectangle
-              (Cr,
-               Gdouble (Parent_Rect.X),
-               Gdouble (Parent_Rect.Y),
-               Gdouble (Parent_Rect.Width),
-               Gdouble (Parent_Rect.Height));
-            Cairo.Fill (Cr);
-
-            Color.Alpha := 0.6;
-            Set_Source_RGBA (Cr, Color);
-
-            MDI.Dnd_Rectangle := New_Pos;
-
-            --  Offset here is to compensate the line width
-            Gtkada.Style.Rounded_Rectangle
-              (Cr,
-               Gdouble (New_Pos.X) + 3.0,
-               Gdouble (New_Pos.Y) + 3.0,
-               Gdouble (New_Pos.Width) - 6.0,
-               Gdouble (New_Pos.Height) - 6.0,
-               Radius => 8.0);
-            Cairo.Fill_Preserve (Cr);
-
-            Color.Alpha := 0.9;
-            Set_Source_RGBA (Cr, Color);
-            Set_Line_Width (Cr, 3.0);
-            Stroke (Cr);
-
-            Layout := MDI.Create_Pango_Layout;
-            Layout.Set_Markup
-              (ASCII.HT & To_String (Message)
-               & ASCII.LF & MDI.Dnd_Message.all);
-
-            Layout.Get_Extents (Ink_Rect, Logical_Rect);
-            W := Gdouble (Logical_Rect.Width / Pango_Scale);
-            H := Gdouble (Logical_Rect.Height / Pango_Scale);
-
-            X := Gdouble (MDI.Dnd_Rectangle.X) +
-              (Gdouble (New_Pos.Width) - W) / 2.0;
-            Y := Gdouble (MDI.Dnd_Rectangle.Y) +
-              (Gdouble (New_Pos.Height) - H) / 2.0;
-
-            --  Keep the text window within the MDI
-
-            X := Gdouble'Max (X, 0.0);
-            Y := Gdouble'Max (Y, 0.0);
-
-            if X + W > Gdouble (MDI.Get_Allocated_Width) then
-               X := Gdouble (MDI.Get_Allocated_Width) - W;
-            end if;
-
-            if Y + H > Gdouble (MDI.Get_Allocated_Height) then
-               Y := Gdouble (MDI.Get_Allocated_Height) - H;
-            end if;
-
-            --  Slightly lighter (and non-transparent) background for the msg.
-            Set_Line_Width (Cr, 1.0);
-            Set_Source_RGBA
-              (Cr, Gtkada.Style.Lighten (Base_Color, 0.3));
-            Gtkada.Style.Rounded_Rectangle
-              (Cr, X - 2.0, Y - 2.0, W + 4.0, H + 4.0, 4.0);
-            Cairo.Fill (Cr);
-
-            Get_Style_Context (MDI).Render_Layout (Cr, X, Y, Layout);
-            Unref (Layout);
-
-            MDI.Dnd_Rectangle_Real.X := Gint'Min (Parent_Rect.X, Gint (X) - 3);
-            MDI.Dnd_Rectangle_Real.Y := Gint'Min (Parent_Rect.Y, Gint (Y) - 3);
-            MDI.Dnd_Rectangle_Real.Width := Gint'Max
-              (Parent_Rect.Width + Parent_Rect.X - MDI.Dnd_Rectangle_Real.X,
-               Gint (W + X) + 4 - MDI.Dnd_Rectangle_Real.X);
-            MDI.Dnd_Rectangle_Real.Height := Gint'Max
-              (Parent_Rect.Height + Parent_Rect.Y - MDI.Dnd_Rectangle_Real.Y,
-               Gint (H + Y) + 4 - MDI.Dnd_Rectangle_Real.Y);
-
-         elsif MDI.Dnd_Rectangle_Real.Width /= 0 then
-            Cairo.Rectangle
-              (Cr,
-               Gdouble (MDI.Dnd_Rectangle_Real.X),
-               Gdouble (MDI.Dnd_Rectangle_Real.Y),
-               Gdouble (MDI.Dnd_Rectangle_Real.Width),
-               Gdouble (MDI.Dnd_Rectangle_Real.Height));
-            Cairo.Fill (Cr);
-         end if;
-      end Do_Draw;
+      Message     : Unbounded_String;
+      In_Central  : Boolean;
+      C3          : MDI_Child;
+      Note        : Gtk_Notebook;
+      Allowed     : Boolean;
 
       Old_Dnd_Target : constant Gdk.Gdk_Window := MDI.Dnd_Target;
 
@@ -8669,11 +9083,24 @@ package body Gtkada.MDI is
       --  Call this if the state has changed to hide the current highlight. We
       --  might, or not, highlight the target depending whether it is allowed
       --  for Child.
-
       if not (Position = MDI.Old_Dnd_Position
               and then MDI.Dnd_Target = Old_Dnd_Target)
+        and then Current /= null
       then
-         Gtkada.Style.Draw_Overlay (MDI, MDI.Dnd_Overlay, Do_Draw'Access);
+         MDI.Dnd_Rectangle := New_Pos;
+         MDI.Dnd_Parent_Rect := Parent_Rect;
+         MDI.Dnd_Area_Message := Message;
+
+         --  Connect to the MDI draw handler to draw the Dnd overlay over it
+         if MDI.Dnd_Handler_Id.Id = Gtk.Handlers.Null_Handler_Id then
+            MDI.Dnd_Handler_Id := Return_Callback.Connect
+              (MDI, Signal_Draw,
+               Return_Callback.To_Marshaller (Draw_DnD_Overlay'Access),
+               After => True);
+         end if;
+
+         --  Force a redraw since we have changed the Dnd overlay and message
+         MDI.Queue_Draw;
       end if;
 
       --  Update the drag state.
@@ -8681,6 +9108,21 @@ package body Gtkada.MDI is
       MDI.Old_Dnd_Position := Position;
 
    end Draw_Dnd_Rectangle;
+
+   ------------------------
+   -- Remove_DnD_Overlay --
+   ------------------------
+
+   procedure Remove_DnD_Overlay
+     (MDI    : not null access MDI_Window_Record'Class;
+      Redraw : Boolean := True) is
+   begin
+      Gtk.Handlers.Disconnect (MDI, MDI.Dnd_Handler_Id);
+
+      if Redraw then
+         MDI.Queue_Draw;
+      end if;
+   end Remove_DnD_Overlay;
 
    ----------------------
    -- Child_Drag_Begin --
@@ -8751,10 +9193,11 @@ package body Gtkada.MDI is
    -- Child_Drag_Finished --
    -------------------------
 
-   procedure Child_Drag_Finished (Child : not null access MDI_Child_Record) is
-      pragma Unreferenced (Child);
+   procedure Child_Drag_Finished (Child : not null access MDI_Child_Record)
+   is
+      MDI : MDI_Window renames Child.MDI;
    begin
-      null;
+      Remove_DnD_Overlay (MDI, Redraw => True);
    end Child_Drag_Finished;
 
    --------------------
@@ -9007,4 +9450,371 @@ package body Gtkada.MDI is
       end if;
    end Thaw_Focus;
 
+   -------------
+   -- Connect --
+   -------------
+
+   procedure Connect
+     (Object  : access MDI_Window_Record'Class;
+      C_Name  : Glib.Signal_Name;
+      Handler : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After   : Boolean) is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_MDI_Window_MDI_Child_Void'Access,
+         Handler     => Cb_To_Address (Handler), --  Set in the closure
+         After       => After);
+   end Connect;
+
+   ------------------
+   -- Connect_Slot --
+   ------------------
+
+   procedure Connect_Slot
+     (Object  : access MDI_Window_Record'Class;
+      C_Name  : Glib.Signal_Name;
+      Handler : Cb_GObject_MDI_Child_Void;
+      After   : Boolean;
+      Slot    : access Glib.Object.GObject_Record'Class := null) is
+   begin
+      Unchecked_Do_Signal_Connect
+        (Object      => Object,
+         C_Name      => C_Name,
+         Marshaller  => Marsh_GObject_MDI_Child_Void'Access,
+         Handler     => Cb_To_Address (Handler), --  Set in the closure
+         Slot_Object => Slot,
+         After       => After);
+   end Connect_Slot;
+
+   ----------------------------------
+   -- Marsh_GObject_MDI_Child_Void --
+   ----------------------------------
+
+   procedure Marsh_GObject_MDI_Child_Void
+     (Closure         : GClosure;
+      Return_Value    : Glib.Values.GValue;
+      N_Params        : Glib.Guint;
+      Params          : Glib.Values.C_GValues;
+      Invocation_Hint : System.Address;
+      User_Data       : System.Address)
+   is
+      pragma Unreferenced (Return_Value, N_Params, Invocation_Hint, User_Data);
+      H   : constant Cb_GObject_MDI_Child_Void :=
+        Address_To_Cb (Get_Callback (Closure));
+      Obj : constant Glib.Object.GObject :=
+        Glib.Object.Convert (Get_Data (Closure));
+   begin
+      H (Obj, MDI_Child (Unchecked_To_Object (Params, 1)));
+   exception when E : others => Process_Exception (E);
+   end Marsh_GObject_MDI_Child_Void;
+
+   -------------------------------------
+   -- Marsh_MDI_Window_MDI_Child_Void --
+   -------------------------------------
+
+   procedure Marsh_MDI_Window_MDI_Child_Void
+     (Closure         : GClosure;
+      Return_Value    : Glib.Values.GValue;
+      N_Params        : Glib.Guint;
+      Params          : Glib.Values.C_GValues;
+      Invocation_Hint : System.Address;
+      User_Data       : System.Address)
+   is
+      pragma Unreferenced (Return_Value, N_Params, Invocation_Hint, User_Data);
+      H   : constant Cb_Gtkada_MDI_Window_MDI_Child_Void :=
+        Address_To_Cb (Get_Callback (Closure));
+      Obj : constant MDI_Window :=
+        MDI_Window (Unchecked_To_Object (Params, 0));
+   begin
+      H (Obj, MDI_Child (Unchecked_To_Object (Params, 1)));
+   exception when E : others => Process_Exception (E);
+   end Marsh_MDI_Window_MDI_Child_Void;
+
+   -----------------------
+   -- On_Child_Selected --
+   -----------------------
+
+   procedure On_Child_Selected
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Child_Selected & ASCII.NUL, Call, After);
+   end On_Child_Selected;
+
+   -----------------------
+   -- On_Child_Selected --
+   -----------------------
+
+   procedure On_Child_Selected
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Child_Selected & ASCII.NUL, Call, After, Slot);
+   end On_Child_Selected;
+
+   --------------------
+   -- On_Float_Child --
+   --------------------
+
+   procedure On_Float_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Float_Child & ASCII.NUL, Call, After);
+   end On_Float_Child;
+
+   --------------------
+   -- On_Float_Child --
+   --------------------
+
+   procedure On_Float_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Float_Child & ASCII.NUL, Call, After, Slot);
+   end On_Float_Child;
+
+   ----------------------------
+   -- On_Child_Title_Changed --
+   ----------------------------
+
+   procedure On_Child_Title_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Child_Title_Changed & ASCII.NUL, Call, After);
+   end On_Child_Title_Changed;
+
+   ----------------------------
+   -- On_Child_Title_Changed --
+   ----------------------------
+
+   procedure On_Child_Title_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Child_Title_Changed & ASCII.NUL, Call, After, Slot);
+   end On_Child_Title_Changed;
+
+   --------------------
+   -- On_Child_Added --
+   --------------------
+
+   procedure On_Child_Added
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Child_Added & ASCII.NUL, Call, After);
+   end On_Child_Added;
+
+   --------------------
+   -- On_Child_Added --
+   --------------------
+
+   procedure On_Child_Added
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Child_Added & ASCII.NUL, Call, After, Slot);
+   end On_Child_Added;
+
+   ----------------------
+   -- On_Child_Removed --
+   ----------------------
+
+   procedure On_Child_Removed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Child_Removed & ASCII.NUL, Call, After);
+   end On_Child_Removed;
+
+   ----------------------
+   -- On_Child_Removed --
+   ----------------------
+
+   procedure On_Child_Removed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Child_Removed & ASCII.NUL, Call, After, Slot);
+   end On_Child_Removed;
+
+   ---------------------------
+   -- On_Child_Icon_Changed --
+   ---------------------------
+
+   procedure On_Child_Icon_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Child_Icon_Changed & ASCII.NUL, Call, After);
+   end On_Child_Icon_Changed;
+
+   ---------------------------
+   -- On_Child_Icon_Changed --
+   ---------------------------
+
+   procedure On_Child_Icon_Changed
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Child_Icon_Changed & ASCII.NUL, Call, After, Slot);
+   end On_Child_Icon_Changed;
+
+   ---------------------
+   -- On_Delete_Event --
+   ---------------------
+
+   procedure On_Delete_Event
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Delete_Event & ASCII.NUL, Call, After);
+   end On_Delete_Event;
+
+   ---------------------
+   -- On_Delete_Event --
+   ---------------------
+
+   procedure On_Delete_Event
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Delete_Event & ASCII.NUL, Call, After, Slot);
+   end On_Delete_Event;
+
+   ----------------------
+   -- On_Unfloat_Child --
+   ----------------------
+
+   procedure On_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Unfloat_Child & ASCII.NUL, Call, After);
+   end On_Unfloat_Child;
+
+   ----------------------
+   -- On_Unfloat_Child --
+   ----------------------
+
+   procedure On_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Unfloat_Child & ASCII.NUL, Call, After, Slot);
+   end On_Unfloat_Child;
+
+   -----------------------------
+   -- On_Before_Unfloat_Child --
+   -----------------------------
+
+   procedure On_Before_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Before_Unfloat_Child & ASCII.NUL, Call, After);
+   end On_Before_Unfloat_Child;
+
+   -----------------------------
+   -- On_Before_Unfloat_Child --
+   -----------------------------
+
+   procedure On_Before_Unfloat_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Before_Unfloat_Child & ASCII.NUL, Call, After, Slot);
+   end On_Before_Unfloat_Child;
+
+   -----------------------------
+   -- On_Before_Destroy_Child --
+   -----------------------------
+
+   procedure On_Before_Destroy_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Before_Destroy_Child & ASCII.NUL, Call, After);
+   end On_Before_Destroy_Child;
+
+   -----------------------------
+   -- On_Before_Unfloat_Child --
+   -----------------------------
+
+   procedure On_Before_Destroy_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Before_Destroy_Child & ASCII.NUL, Call, After, Slot);
+   end On_Before_Destroy_Child;
+
+   ----------------------------
+   -- On_Before_Remove_Child --
+   ----------------------------
+
+   procedure On_Before_Remove_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_Gtkada_MDI_Window_MDI_Child_Void;
+      After : Boolean := False) is
+   begin
+      Connect (Self, Signal_Before_Remove_Child & ASCII.NUL, Call, After);
+   end On_Before_Remove_Child;
+
+   -----------------------------
+   -- On_Before_Unfloat_Child --
+   -----------------------------
+
+   procedure On_Before_Remove_Child
+     (Self  : not null access MDI_Window_Record'Class;
+      Call  : Cb_GObject_MDI_Child_Void;
+      Slot  : not null access Glib.Object.GObject_Record'Class;
+      After : Boolean := False) is
+   begin
+      Connect_Slot
+        (Self, Signal_Before_Remove_Child & ASCII.NUL, Call, After, Slot);
+   end On_Before_Remove_Child;
 end Gtkada.MDI;

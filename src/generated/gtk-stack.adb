@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,7 +26,7 @@ pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Stack is
@@ -81,9 +81,9 @@ package body Gtk.Stack is
       procedure Internal
          (Self  : System.Address;
           Child : System.Address;
-          Name  : Interfaces.C.Strings.chars_ptr);
+          Name  : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_stack_add_named");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
    begin
       Internal (Get_Object (Self), Get_Object (Child), Tmp_Name);
       Free (Tmp_Name);
@@ -102,11 +102,11 @@ package body Gtk.Stack is
       procedure Internal
          (Self  : System.Address;
           Child : System.Address;
-          Name  : Interfaces.C.Strings.chars_ptr;
-          Title : Interfaces.C.Strings.chars_ptr);
+          Name  : Gtkada.Types.Chars_Ptr;
+          Title : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_stack_add_titled");
-      Tmp_Name  : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Name  : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Get_Object (Self), Get_Object (Child), Tmp_Name, Tmp_Title);
       Free (Tmp_Title);
@@ -123,9 +123,9 @@ package body Gtk.Stack is
    is
       function Internal
          (Self : System.Address;
-          Name : Interfaces.C.Strings.chars_ptr) return System.Address;
+          Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_stack_get_child_by_name");
-      Tmp_Name        : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name        : Gtkada.Types.Chars_Ptr := New_String (Name);
       Stub_Gtk_Widget : Gtk.Widget.Gtk_Widget_Record;
       Tmp_Return      : System.Address;
    begin
@@ -133,6 +133,19 @@ package body Gtk.Stack is
       Free (Tmp_Name);
       return Gtk.Widget.Gtk_Widget (Get_User_Data (Tmp_Return, Stub_Gtk_Widget));
    end Get_Child_By_Name;
+
+   ----------------------
+   -- Get_Hhomogeneous --
+   ----------------------
+
+   function Get_Hhomogeneous
+      (Self : not null access Gtk_Stack_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_stack_get_hhomogeneous");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Hhomogeneous;
 
    ---------------------
    -- Get_Homogeneous --
@@ -146,6 +159,19 @@ package body Gtk.Stack is
    begin
       return Internal (Get_Object (Self)) /= 0;
    end Get_Homogeneous;
+
+   --------------------------
+   -- Get_Interpolate_Size --
+   --------------------------
+
+   function Get_Interpolate_Size
+      (Self : not null access Gtk_Stack_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_stack_get_interpolate_size");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Interpolate_Size;
 
    -----------------------------
    -- Get_Transition_Duration --
@@ -188,6 +214,19 @@ package body Gtk.Stack is
       return Internal (Get_Object (Self));
    end Get_Transition_Type;
 
+   ----------------------
+   -- Get_Vhomogeneous --
+   ----------------------
+
+   function Get_Vhomogeneous
+      (Self : not null access Gtk_Stack_Record) return Boolean
+   is
+      function Internal (Self : System.Address) return Glib.Gboolean;
+      pragma Import (C, Internal, "gtk_stack_get_vhomogeneous");
+   begin
+      return Internal (Get_Object (Self)) /= 0;
+   end Get_Vhomogeneous;
+
    -----------------------
    -- Get_Visible_Child --
    -----------------------
@@ -210,11 +249,27 @@ package body Gtk.Stack is
       (Self : not null access Gtk_Stack_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_stack_get_visible_child_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Self)));
    end Get_Visible_Child_Name;
+
+   ----------------------
+   -- Set_Hhomogeneous --
+   ----------------------
+
+   procedure Set_Hhomogeneous
+      (Self         : not null access Gtk_Stack_Record;
+       Hhomogeneous : Boolean)
+   is
+      procedure Internal
+         (Self         : System.Address;
+          Hhomogeneous : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_stack_set_hhomogeneous");
+   begin
+      Internal (Get_Object (Self), Boolean'Pos (Hhomogeneous));
+   end Set_Hhomogeneous;
 
    ---------------------
    -- Set_Homogeneous --
@@ -231,6 +286,22 @@ package body Gtk.Stack is
    begin
       Internal (Get_Object (Self), Boolean'Pos (Homogeneous));
    end Set_Homogeneous;
+
+   --------------------------
+   -- Set_Interpolate_Size --
+   --------------------------
+
+   procedure Set_Interpolate_Size
+      (Self             : not null access Gtk_Stack_Record;
+       Interpolate_Size : Boolean)
+   is
+      procedure Internal
+         (Self             : System.Address;
+          Interpolate_Size : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_stack_set_interpolate_size");
+   begin
+      Internal (Get_Object (Self), Boolean'Pos (Interpolate_Size));
+   end Set_Interpolate_Size;
 
    -----------------------------
    -- Set_Transition_Duration --
@@ -262,6 +333,22 @@ package body Gtk.Stack is
       Internal (Get_Object (Self), Transition);
    end Set_Transition_Type;
 
+   ----------------------
+   -- Set_Vhomogeneous --
+   ----------------------
+
+   procedure Set_Vhomogeneous
+      (Self         : not null access Gtk_Stack_Record;
+       Vhomogeneous : Boolean)
+   is
+      procedure Internal
+         (Self         : System.Address;
+          Vhomogeneous : Glib.Gboolean);
+      pragma Import (C, Internal, "gtk_stack_set_vhomogeneous");
+   begin
+      Internal (Get_Object (Self), Boolean'Pos (Vhomogeneous));
+   end Set_Vhomogeneous;
+
    -----------------------
    -- Set_Visible_Child --
    -----------------------
@@ -287,10 +374,10 @@ package body Gtk.Stack is
    is
       procedure Internal
          (Self       : System.Address;
-          Name       : Interfaces.C.Strings.chars_ptr;
+          Name       : Gtkada.Types.Chars_Ptr;
           Transition : Gtk_Stack_Transition_Type);
       pragma Import (C, Internal, "gtk_stack_set_visible_child_full");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
    begin
       Internal (Get_Object (Self), Tmp_Name, Transition);
       Free (Tmp_Name);
@@ -306,9 +393,9 @@ package body Gtk.Stack is
    is
       procedure Internal
          (Self : System.Address;
-          Name : Interfaces.C.Strings.chars_ptr);
+          Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_stack_set_visible_child_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
    begin
       Internal (Get_Object (Self), Tmp_Name);
       Free (Tmp_Name);

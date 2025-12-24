@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,7 +26,7 @@ pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Css_Provider is
@@ -82,12 +82,12 @@ package body Gtk.Css_Provider is
    is
       function Internal
          (Self      : System.Address;
-          Data      : Interfaces.C.Strings.chars_ptr;
+          Data      : Gtkada.Types.Chars_Ptr;
           Length    : Gssize;
           Acc_Error : access Glib.Error.GError) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_css_provider_load_from_data");
       Acc_Error  : aliased Glib.Error.GError;
-      Tmp_Data   : Interfaces.C.Strings.chars_ptr := New_String (Data);
+      Tmp_Data   : Gtkada.Types.Chars_Ptr := New_String (Data);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Data, -1, Acc_Error'Access);
@@ -109,11 +109,11 @@ package body Gtk.Css_Provider is
    is
       function Internal
          (Self      : System.Address;
-          Path      : Interfaces.C.Strings.chars_ptr;
+          Path      : Gtkada.Types.Chars_Ptr;
           Acc_Error : access Glib.Error.GError) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_css_provider_load_from_path");
       Acc_Error  : aliased Glib.Error.GError;
-      Tmp_Path   : Interfaces.C.Strings.chars_ptr := New_String (Path);
+      Tmp_Path   : Gtkada.Types.Chars_Ptr := New_String (Path);
       Tmp_Return : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Path, Acc_Error'Access);
@@ -124,6 +124,24 @@ package body Gtk.Css_Provider is
       return Tmp_Return /= 0;
    end Load_From_Path;
 
+   ------------------------
+   -- Load_From_Resource --
+   ------------------------
+
+   procedure Load_From_Resource
+      (Self          : not null access Gtk_Css_Provider_Record;
+       Resource_Path : UTF8_String)
+   is
+      procedure Internal
+         (Self          : System.Address;
+          Resource_Path : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "gtk_css_provider_load_from_resource");
+      Tmp_Resource_Path : Gtkada.Types.Chars_Ptr := New_String (Resource_Path);
+   begin
+      Internal (Get_Object (Self), Tmp_Resource_Path);
+      Free (Tmp_Resource_Path);
+   end Load_From_Resource;
+
    ---------------
    -- To_String --
    ---------------
@@ -132,7 +150,7 @@ package body Gtk.Css_Provider is
       (Self : not null access Gtk_Css_Provider_Record) return UTF8_String
    is
       function Internal
-         (Self : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Self : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_css_provider_to_string");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Self)));
@@ -188,16 +206,16 @@ package body Gtk.Css_Provider is
        Variant : UTF8_String := "") return Gtk_Css_Provider
    is
       function Internal
-         (Name    : Interfaces.C.Strings.chars_ptr;
-          Variant : Interfaces.C.Strings.chars_ptr) return System.Address;
+         (Name    : Gtkada.Types.Chars_Ptr;
+          Variant : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_css_provider_get_named");
-      Tmp_Name              : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_Variant           : Interfaces.C.Strings.chars_ptr;
+      Tmp_Name              : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_Variant           : Gtkada.Types.Chars_Ptr;
       Stub_Gtk_Css_Provider : Gtk_Css_Provider_Record;
       Tmp_Return            : System.Address;
    begin
       if Variant = "" then
-         Tmp_Variant := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Variant := Gtkada.Types.Null_Ptr;
       else
          Tmp_Variant := New_String (Variant);
       end if;

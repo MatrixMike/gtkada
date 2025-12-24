@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -33,7 +33,7 @@ package body Gtk.Actionable is
 
    function Get_Action_Name (Self : Gtk_Actionable) return UTF8_String is
       function Internal
-         (Self : Gtk_Actionable) return Interfaces.C.Strings.chars_ptr;
+         (Self : Gtk_Actionable) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_actionable_get_action_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Self));
@@ -58,14 +58,19 @@ package body Gtk.Actionable is
 
    procedure Set_Action_Name
       (Self        : Gtk_Actionable;
-       Action_Name : UTF8_String)
+       Action_Name : UTF8_String := "")
    is
       procedure Internal
          (Self        : Gtk_Actionable;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_action_name");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr;
    begin
+      if Action_Name = "" then
+         Tmp_Action_Name := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Action_Name := New_String (Action_Name);
+      end if;
       Internal (Self, Tmp_Action_Name);
       Free (Tmp_Action_Name);
    end Set_Action_Name;
@@ -96,9 +101,9 @@ package body Gtk.Actionable is
    is
       procedure Internal
          (Self                 : Gtk_Actionable;
-          Detailed_Action_Name : Interfaces.C.Strings.chars_ptr);
+          Detailed_Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_actionable_set_detailed_action_name");
-      Tmp_Detailed_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Detailed_Action_Name);
+      Tmp_Detailed_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Detailed_Action_Name);
    begin
       Internal (Self, Tmp_Detailed_Action_Name);
       Free (Tmp_Detailed_Action_Name);

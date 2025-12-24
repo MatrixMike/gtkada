@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -80,7 +80,7 @@ package body Gtk.Font_Chooser is
 
    function Get_Font (Self : Gtk_Font_Chooser) return UTF8_String is
       function Internal
-         (Self : Gtk_Font_Chooser) return Interfaces.C.Strings.chars_ptr;
+         (Self : Gtk_Font_Chooser) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_font_chooser_get_font");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Self));
@@ -114,13 +114,51 @@ package body Gtk.Font_Chooser is
       return Pango.Font_Family.Pango_Font_Family (Get_User_Data (Internal (Self), Stub_Pango_Font_Family));
    end Get_Font_Family;
 
+   -----------------------
+   -- Get_Font_Features --
+   -----------------------
+
+   function Get_Font_Features (Self : Gtk_Font_Chooser) return UTF8_String is
+      function Internal
+         (Self : Gtk_Font_Chooser) return Gtkada.Types.Chars_Ptr;
+      pragma Import (C, Internal, "gtk_font_chooser_get_font_features");
+   begin
+      return Gtkada.Bindings.Value_And_Free (Internal (Self));
+   end Get_Font_Features;
+
+   ------------------
+   -- Get_Font_Map --
+   ------------------
+
+   function Get_Font_Map
+      (Self : Gtk_Font_Chooser) return Pango.Font_Map.Pango_Font_Map
+   is
+      function Internal (Self : Gtk_Font_Chooser) return System.Address;
+      pragma Import (C, Internal, "gtk_font_chooser_get_font_map");
+      Stub_Pango_Font_Map : Pango.Font_Map.Pango_Font_Map_Record;
+   begin
+      return Pango.Font_Map.Pango_Font_Map (Get_User_Data (Internal (Self), Stub_Pango_Font_Map));
+   end Get_Font_Map;
+
+   ------------------
+   -- Get_Language --
+   ------------------
+
+   function Get_Language (Self : Gtk_Font_Chooser) return UTF8_String is
+      function Internal
+         (Self : Gtk_Font_Chooser) return Gtkada.Types.Chars_Ptr;
+      pragma Import (C, Internal, "gtk_font_chooser_get_language");
+   begin
+      return Gtkada.Bindings.Value_And_Free (Internal (Self));
+   end Get_Language;
+
    ----------------------
    -- Get_Preview_Text --
    ----------------------
 
    function Get_Preview_Text (Self : Gtk_Font_Chooser) return UTF8_String is
       function Internal
-         (Self : Gtk_Font_Chooser) return Interfaces.C.Strings.chars_ptr;
+         (Self : Gtk_Font_Chooser) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_font_chooser_get_preview_text");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Self));
@@ -220,13 +258,42 @@ package body Gtk.Font_Chooser is
    procedure Set_Font (Self : Gtk_Font_Chooser; Fontname : UTF8_String) is
       procedure Internal
          (Self     : Gtk_Font_Chooser;
-          Fontname : Interfaces.C.Strings.chars_ptr);
+          Fontname : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_font_chooser_set_font");
-      Tmp_Fontname : Interfaces.C.Strings.chars_ptr := New_String (Fontname);
+      Tmp_Fontname : Gtkada.Types.Chars_Ptr := New_String (Fontname);
    begin
       Internal (Self, Tmp_Fontname);
       Free (Tmp_Fontname);
    end Set_Font;
+
+   ------------------
+   -- Set_Font_Map --
+   ------------------
+
+   procedure Set_Font_Map
+      (Self    : Gtk_Font_Chooser;
+       Fontmap : access Pango.Font_Map.Pango_Font_Map_Record'Class)
+   is
+      procedure Internal (Self : Gtk_Font_Chooser; Fontmap : System.Address);
+      pragma Import (C, Internal, "gtk_font_chooser_set_font_map");
+   begin
+      Internal (Self, Get_Object_Or_Null (GObject (Fontmap)));
+   end Set_Font_Map;
+
+   ------------------
+   -- Set_Language --
+   ------------------
+
+   procedure Set_Language (Self : Gtk_Font_Chooser; Language : UTF8_String) is
+      procedure Internal
+         (Self     : Gtk_Font_Chooser;
+          Language : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "gtk_font_chooser_set_language");
+      Tmp_Language : Gtkada.Types.Chars_Ptr := New_String (Language);
+   begin
+      Internal (Self, Tmp_Language);
+      Free (Tmp_Language);
+   end Set_Language;
 
    ----------------------
    -- Set_Preview_Text --
@@ -235,9 +302,9 @@ package body Gtk.Font_Chooser is
    procedure Set_Preview_Text (Self : Gtk_Font_Chooser; Text : UTF8_String) is
       procedure Internal
          (Self : Gtk_Font_Chooser;
-          Text : Interfaces.C.Strings.chars_ptr);
+          Text : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_font_chooser_set_preview_text");
-      Tmp_Text : Interfaces.C.Strings.chars_ptr := New_String (Text);
+      Tmp_Text : Gtkada.Types.Chars_Ptr := New_String (Text);
    begin
       Internal (Self, Tmp_Text);
       Free (Tmp_Text);

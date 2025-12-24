@@ -21,9 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package body Gtkada.Types is
+with System; use System;
+with Glib; use Glib;
 
-   use Interfaces.C.Strings;
+package body Gtkada.Types is
 
    ---------
    -- "+" --
@@ -64,13 +65,91 @@ package body Gtkada.Types is
    procedure Free (A : in out Chars_Ptr_Array) is
    begin
       for J in A'Range loop
-         Interfaces.C.Strings.Free (A (J));
+         g_free (A (J));
+         A (J) := Null_Ptr;
       end loop;
    end Free;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (A : in out Interfaces.C.Strings.chars_ptr_array) is
+   begin
+      for J in A'Range loop
+         Interfaces.C.Strings.Free (A (J));
+         A (J) := Interfaces.C.Strings.Null_Ptr;
+      end loop;
+   end Free;
+
+   ----------------
+   -- Null_Array --
+   ----------------
 
    function Null_Array return Chars_Ptr_Array is
    begin
       return (1 .. 0 => Null_Ptr);
    end Null_Array;
+
+   --------------
+   -- Null_Ptr --
+   --------------
+
+   function Null_Ptr return Chars_Ptr is
+   begin
+      return Chars_Ptr (Interfaces.C.Strings.Null_Ptr);
+   end Null_Ptr;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Item : Chars_Ptr) return String is
+   begin
+      return Interfaces.C.Strings.Value
+        (Interfaces.C.Strings.chars_ptr (Item));
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Item   : Chars_Ptr;
+      Length : Interfaces.C.size_t) return Interfaces.C.char_array is
+   begin
+      return Interfaces.C.Strings.Value
+        (Interfaces.C.Strings.chars_ptr (Item),
+         Length);
+   end Value;
+
+   function Value
+     (Item   : Chars_Ptr;
+      Length : Interfaces.C.size_t) return String is
+   begin
+      return Interfaces.C.Strings.Value
+        (Interfaces.C.Strings.chars_ptr (Item), Length);
+   end Value;
+
+   ----------------
+   -- New_String --
+   ----------------
+
+   function New_String (S : String) return Chars_Ptr is
+      function g_strndup (S : System.Address; N : Gsize) return Chars_Ptr;
+      pragma Import (C, g_strndup);
+   begin
+      return g_strndup (S'Address, Gsize (S'Length));
+   end New_String;
+
+   ----------
+   -- Free --
+   ----------
+
+   procedure Free (Mem : in out Chars_Ptr) is
+      X : constant Chars_Ptr := Mem;
+   begin
+      g_free (X);
+   end Free;
 
 end Gtkada.Types;

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,7 +29,7 @@ with Glib.Values;                use Glib.Values;
 with Gtk.Arguments;              use Gtk.Arguments;
 with Gtkada.Bindings;            use Gtkada.Bindings;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Window is
@@ -292,6 +292,24 @@ package body Gtk.Window is
    begin
       Internal (Get_Object (Window));
    end Fullscreen;
+
+   ---------------------------
+   -- Fullscreen_On_Monitor --
+   ---------------------------
+
+   procedure Fullscreen_On_Monitor
+      (Window  : not null access Gtk_Window_Record;
+       Screen  : not null access Gdk.Screen.Gdk_Screen_Record'Class;
+       Monitor : Glib.Gint)
+   is
+      procedure Internal
+         (Window  : System.Address;
+          Screen  : System.Address;
+          Monitor : Glib.Gint);
+      pragma Import (C, Internal, "gtk_window_fullscreen_on_monitor");
+   begin
+      Internal (Get_Object (Window), Get_Object (Screen), Monitor);
+   end Fullscreen_On_Monitor;
 
    ----------------------
    -- Get_Accept_Focus --
@@ -562,7 +580,7 @@ package body Gtk.Window is
       (Window : not null access Gtk_Window_Record) return UTF8_String
    is
       function Internal
-         (Window : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Window : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_window_get_icon_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Window)));
@@ -670,7 +688,7 @@ package body Gtk.Window is
       (Window : not null access Gtk_Window_Record) return UTF8_String
    is
       function Internal
-         (Window : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Window : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_window_get_role");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Window)));
@@ -743,11 +761,26 @@ package body Gtk.Window is
       (Window : not null access Gtk_Window_Record) return UTF8_String
    is
       function Internal
-         (Window : System.Address) return Interfaces.C.Strings.chars_ptr;
+         (Window : System.Address) return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_window_get_title");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal (Get_Object (Window)));
    end Get_Title;
+
+   ------------------
+   -- Get_Titlebar --
+   ------------------
+
+   function Get_Titlebar
+      (Window : not null access Gtk_Window_Record)
+       return Gtk.Widget.Gtk_Widget
+   is
+      function Internal (Window : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_window_get_titlebar");
+      Stub_Gtk_Widget : Gtk.Widget.Gtk_Widget_Record;
+   begin
+      return Gtk.Widget.Gtk_Widget (Get_User_Data (Internal (Get_Object (Window)), Stub_Gtk_Widget));
+   end Get_Titlebar;
 
    -----------------------
    -- Get_Transient_For --
@@ -943,9 +976,9 @@ package body Gtk.Window is
    is
       function Internal
          (Window   : System.Address;
-          Geometry : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Geometry : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_window_parse_geometry");
-      Tmp_Geometry : Interfaces.C.Strings.chars_ptr := New_String (Geometry);
+      Tmp_Geometry : Gtkada.Types.Chars_Ptr := New_String (Geometry);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Window), Tmp_Geometry);
@@ -1374,9 +1407,9 @@ package body Gtk.Window is
    is
       function Internal
          (Window   : System.Address;
-          Filename : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Filename : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_window_set_icon_from_file");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Window), Tmp_Filename);
@@ -1408,12 +1441,12 @@ package body Gtk.Window is
    is
       procedure Internal
          (Window : System.Address;
-          Name   : Interfaces.C.Strings.chars_ptr);
+          Name   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_icon_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Name : Gtkada.Types.Chars_Ptr;
    begin
       if Name = "" then
-         Tmp_Name := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Name := Gtkada.Types.Null_Ptr;
       else
          Tmp_Name := New_String (Name);
       end if;
@@ -1535,9 +1568,9 @@ package body Gtk.Window is
    is
       procedure Internal
          (Window : System.Address;
-          Role   : Interfaces.C.Strings.chars_ptr);
+          Role   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_role");
-      Tmp_Role : Interfaces.C.Strings.chars_ptr := New_String (Role);
+      Tmp_Role : Gtkada.Types.Chars_Ptr := New_String (Role);
    begin
       Internal (Get_Object (Window), Tmp_Role);
       Free (Tmp_Role);
@@ -1595,9 +1628,9 @@ package body Gtk.Window is
    is
       procedure Internal
          (Window     : System.Address;
-          Startup_Id : Interfaces.C.Strings.chars_ptr);
+          Startup_Id : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_startup_id");
-      Tmp_Startup_Id : Interfaces.C.Strings.chars_ptr := New_String (Startup_Id);
+      Tmp_Startup_Id : Gtkada.Types.Chars_Ptr := New_String (Startup_Id);
    begin
       Internal (Get_Object (Window), Tmp_Startup_Id);
       Free (Tmp_Startup_Id);
@@ -1613,9 +1646,9 @@ package body Gtk.Window is
    is
       procedure Internal
          (Window : System.Address;
-          Title  : Interfaces.C.Strings.chars_ptr);
+          Title  : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_title");
-      Tmp_Title : Interfaces.C.Strings.chars_ptr := New_String (Title);
+      Tmp_Title : Gtkada.Types.Chars_Ptr := New_String (Title);
    begin
       Internal (Get_Object (Window), Tmp_Title);
       Free (Tmp_Title);
@@ -1692,11 +1725,11 @@ package body Gtk.Window is
    is
       procedure Internal
          (Window        : System.Address;
-          Wmclass_Name  : Interfaces.C.Strings.chars_ptr;
-          Wmclass_Class : Interfaces.C.Strings.chars_ptr);
+          Wmclass_Name  : Gtkada.Types.Chars_Ptr;
+          Wmclass_Class : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_wmclass");
-      Tmp_Wmclass_Name  : Interfaces.C.Strings.chars_ptr := New_String (Wmclass_Name);
-      Tmp_Wmclass_Class : Interfaces.C.Strings.chars_ptr := New_String (Wmclass_Class);
+      Tmp_Wmclass_Name  : Gtkada.Types.Chars_Ptr := New_String (Wmclass_Name);
+      Tmp_Wmclass_Class : Gtkada.Types.Chars_Ptr := New_String (Wmclass_Class);
    begin
       Internal (Get_Object (Window), Tmp_Wmclass_Name, Tmp_Wmclass_Class);
       Free (Tmp_Wmclass_Class);
@@ -1765,7 +1798,7 @@ package body Gtk.Window is
    ---------------------------
 
    function Get_Default_Icon_Name return UTF8_String is
-      function Internal return Interfaces.C.Strings.chars_ptr;
+      function Internal return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_window_get_default_icon_name");
    begin
       return Gtkada.Bindings.Value_Allowing_Null (Internal);
@@ -1816,9 +1849,9 @@ package body Gtk.Window is
       (Filename : UTF8_String) return Boolean
    is
       function Internal
-         (Filename : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+         (Filename : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_window_set_default_icon_from_file");
-      Tmp_Filename : Interfaces.C.Strings.chars_ptr := New_String (Filename);
+      Tmp_Filename : Gtkada.Types.Chars_Ptr := New_String (Filename);
       Tmp_Return   : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Tmp_Filename);
@@ -1844,9 +1877,9 @@ package body Gtk.Window is
    ---------------------------
 
    procedure Set_Default_Icon_Name (Name : UTF8_String) is
-      procedure Internal (Name : Interfaces.C.Strings.chars_ptr);
+      procedure Internal (Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_window_set_default_icon_name");
-      Tmp_Name : Interfaces.C.Strings.chars_ptr := New_String (Name);
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
    begin
       Internal (Tmp_Name);
       Free (Tmp_Name);

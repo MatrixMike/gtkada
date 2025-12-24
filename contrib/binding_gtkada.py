@@ -190,9 +190,8 @@ Where the package node is defined as follows:
     </package>
 """
 
-from xml.etree.cElementTree import parse, QName, tostring, SubElement
-from adaformat import AdaType, GObject, CType, Proxy, List, naming,\
-    Enum, package_name, Record
+from xml.etree.cElementTree import parse, SubElement
+from adaformat import AdaType, GObject, List, naming, Enum, Record
 
 
 class GtkAda(object):
@@ -297,16 +296,16 @@ class GtkAdaPackage(object):
         """
         result = []
         if self.node:
-            for l in self.node.findall("list"):
-                result.append((l.get("ada"),
-                               naming.type(name="", cname=l.get("ctype")),
+            for l_inst in self.node.findall("list"):
+                result.append((l_inst.get("ada"),
+                               naming.type(name="", cname=l_inst.get("ctype")),
                                False,
-                               l.get("section", "")))
-            for l in self.node.findall("slist"):
-                result.append((l.get("ada"),
-                               naming.type(name="", cname=l.get("ctype")),
+                               l_inst.get("section", "")))
+            for s_l in self.node.findall("slist"):
+                result.append((s_l.get("ada"),
+                               naming.type(name="", cname=s_l.get("ctype")),
                                True,
-                               l.get("section", "")))
+                               s_l.get("section", "")))
 
         return result
 
@@ -434,7 +433,7 @@ class GtkAdaPackage(object):
         if self.node is not None:
             extra = self.node.find("extra")
             if extra is not None:
-                return extra.getchildren()
+                return list(extra)
         return None
 
     def get_default_param_node(self, name):
@@ -579,6 +578,22 @@ class GtkAdaParameter(object):
         if self.default is not None:
             return self.default.get("direction", None)
         return None
+
+    def get_caller_allocates(self):
+        value = None
+        if self.node is not None:
+            value = self.node.get("caller-allocates", None)
+        if self.default is not None:
+            value = self.default.get("caller-allocates", None)
+        return value
+
+    def get_transfer_ownership(self):
+        value = None
+        if self.node is not None:
+            value = self.node.get("transfer-ownership", None)
+        if self.default is not None:
+            value = self.default.get("transfer-ownership", None)
+        return value
 
     def ada_name(self):
         name = None

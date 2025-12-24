@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@ pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Page_Setup is
@@ -56,6 +56,19 @@ package body Gtk.Page_Setup is
       Self := new Gtk_Page_Setup_Record;
       Gtk.Page_Setup.Initialize_From_File (Self, File_Name);
    end Gtk_New_From_File;
+
+   ---------------------------
+   -- Gtk_New_From_Gvariant --
+   ---------------------------
+
+   procedure Gtk_New_From_Gvariant
+      (Self    : out Gtk_Page_Setup;
+       Variant : Glib.Variant.Gvariant)
+   is
+   begin
+      Self := new Gtk_Page_Setup_Record;
+      Gtk.Page_Setup.Initialize_From_Gvariant (Self, Variant);
+   end Gtk_New_From_Gvariant;
 
    ---------------------------
    -- Gtk_New_From_Key_File --
@@ -96,6 +109,19 @@ package body Gtk.Page_Setup is
    end Gtk_Page_Setup_New_From_File;
 
    --------------------------------------
+   -- Gtk_Page_Setup_New_From_Gvariant --
+   --------------------------------------
+
+   function Gtk_Page_Setup_New_From_Gvariant
+      (Variant : Glib.Variant.Gvariant) return Gtk_Page_Setup
+   is
+      Self : constant Gtk_Page_Setup := new Gtk_Page_Setup_Record;
+   begin
+      Gtk.Page_Setup.Initialize_From_Gvariant (Self, Variant);
+      return Self;
+   end Gtk_Page_Setup_New_From_Gvariant;
+
+   --------------------------------------
    -- Gtk_Page_Setup_New_From_Key_File --
    --------------------------------------
 
@@ -131,9 +157,9 @@ package body Gtk.Page_Setup is
        File_Name : UTF8_String)
    is
       function Internal
-         (File_Name : Interfaces.C.Strings.chars_ptr) return System.Address;
+         (File_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_page_setup_new_from_file");
-      Tmp_File_Name : Interfaces.C.Strings.chars_ptr := New_String (File_Name);
+      Tmp_File_Name : Gtkada.Types.Chars_Ptr := New_String (File_Name);
       Tmp_Return    : System.Address;
    begin
       if not Self.Is_Created then
@@ -142,6 +168,22 @@ package body Gtk.Page_Setup is
          Set_Object (Self, Tmp_Return);
       end if;
    end Initialize_From_File;
+
+   ------------------------------
+   -- Initialize_From_Gvariant --
+   ------------------------------
+
+   procedure Initialize_From_Gvariant
+      (Self    : not null access Gtk_Page_Setup_Record'Class;
+       Variant : Glib.Variant.Gvariant)
+   is
+      function Internal (Variant : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_page_setup_new_from_gvariant");
+   begin
+      if not Self.Is_Created then
+         Set_Object (Self, Internal (Get_Object (Variant)));
+      end if;
+   end Initialize_From_Gvariant;
 
    ------------------------------
    -- Initialize_From_Key_File --
@@ -154,14 +196,14 @@ package body Gtk.Page_Setup is
    is
       function Internal
          (Key_File   : Glib.Key_File.G_Key_File;
-          Group_Name : Interfaces.C.Strings.chars_ptr) return System.Address;
+          Group_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "gtk_page_setup_new_from_key_file");
-      Tmp_Group_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Group_Name : Gtkada.Types.Chars_Ptr;
       Tmp_Return     : System.Address;
    begin
       if not Self.Is_Created then
          if Group_Name = "" then
-            Tmp_Group_Name := Interfaces.C.Strings.Null_Ptr;
+            Tmp_Group_Name := Gtkada.Types.Null_Ptr;
          else
             Tmp_Group_Name := New_String (Group_Name);
          end if;
@@ -352,9 +394,9 @@ package body Gtk.Page_Setup is
    is
       function Internal
          (Self      : System.Address;
-          File_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          File_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_page_setup_load_file");
-      Tmp_File_Name : Interfaces.C.Strings.chars_ptr := New_String (File_Name);
+      Tmp_File_Name : Gtkada.Types.Chars_Ptr := New_String (File_Name);
       Tmp_Return    : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_File_Name);
@@ -374,13 +416,13 @@ package body Gtk.Page_Setup is
       function Internal
          (Self       : System.Address;
           Key_File   : Glib.Key_File.G_Key_File;
-          Group_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Group_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_page_setup_load_key_file");
-      Tmp_Group_Name : Interfaces.C.Strings.chars_ptr;
+      Tmp_Group_Name : Gtkada.Types.Chars_Ptr;
       Tmp_Return     : Glib.Gboolean;
    begin
       if Group_Name = "" then
-         Tmp_Group_Name := Interfaces.C.Strings.Null_Ptr;
+         Tmp_Group_Name := Gtkada.Types.Null_Ptr;
       else
          Tmp_Group_Name := New_String (Group_Name);
       end if;
@@ -515,9 +557,9 @@ package body Gtk.Page_Setup is
    is
       function Internal
          (Self      : System.Address;
-          File_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          File_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "gtk_page_setup_to_file");
-      Tmp_File_Name : Interfaces.C.Strings.chars_ptr := New_String (File_Name);
+      Tmp_File_Name : Gtkada.Types.Chars_Ptr := New_String (File_Name);
       Tmp_Return    : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_File_Name);
@@ -526,21 +568,40 @@ package body Gtk.Page_Setup is
    end To_File;
 
    -----------------
+   -- To_Gvariant --
+   -----------------
+
+   function To_Gvariant
+      (Self : not null access Gtk_Page_Setup_Record)
+       return Glib.Variant.Gvariant
+   is
+      function Internal (Self : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_page_setup_to_gvariant");
+   begin
+      return From_Object (Internal (Get_Object (Self)));
+   end To_Gvariant;
+
+   -----------------
    -- To_Key_File --
    -----------------
 
    procedure To_Key_File
       (Self       : not null access Gtk_Page_Setup_Record;
        Key_File   : Glib.Key_File.G_Key_File;
-       Group_Name : UTF8_String)
+       Group_Name : UTF8_String := "")
    is
       procedure Internal
          (Self       : System.Address;
           Key_File   : Glib.Key_File.G_Key_File;
-          Group_Name : Interfaces.C.Strings.chars_ptr);
+          Group_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_page_setup_to_key_file");
-      Tmp_Group_Name : Interfaces.C.Strings.chars_ptr := New_String (Group_Name);
+      Tmp_Group_Name : Gtkada.Types.Chars_Ptr;
    begin
+      if Group_Name = "" then
+         Tmp_Group_Name := Gtkada.Types.Null_Ptr;
+      else
+         Tmp_Group_Name := New_String (Group_Name);
+      end if;
       Internal (Get_Object (Self), Key_File, Tmp_Group_Name);
       Free (Tmp_Group_Name);
    end To_Key_File;

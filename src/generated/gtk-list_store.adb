@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,9 +27,7 @@ with Ada.Unchecked_Conversion;
 with Glib.Object;
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 with Gtkada.Bindings;            use Gtkada.Bindings;
-pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
-pragma Warnings(On);
+with Gtkada.Types;               use Gtkada.Types;
 
 package body Gtk.List_Store is
 
@@ -109,7 +107,7 @@ package body Gtk.List_Store is
          Columns    : System.Address;
          Values     : System.Address;
          N_Values   : Gint);
-      pragma Import (C, Internal, "gtk_tree_store_set_valuesv");
+      pragma Import (C, Internal, "gtk_list_store_set_valuesv");
    begin
       if Columns'Length = Values'Length then
          Internal (Get_Object (Self), Iter,
@@ -535,9 +533,7 @@ package body Gtk.List_Store is
       Tmp_Iter : aliased Gtk.Tree_Model.Gtk_Tree_Iter := Iter;
    begin
       Internal (Get_Object (List_Store), Tmp_Iter);
-      Iter := Tmp_Iter;
-
-Iter := Gtk.Tree_Model.Null_Iter;
+      Iter := Gtk.Tree_Model.Null_Iter;
    end Remove;
 
    -------------
@@ -1016,7 +1012,7 @@ Iter := Gtk.Tree_Model.Null_Iter;
       function Internal
          (Tree_Model : System.Address;
           Iter       : Gtk.Tree_Model.Gtk_Tree_Iter)
-          return Interfaces.C.Strings.chars_ptr;
+          return Gtkada.Types.Chars_Ptr;
       pragma Import (C, Internal, "gtk_tree_model_get_string_from_iter");
    begin
       return Gtkada.Bindings.Value_And_Free (Internal (Get_Object (Tree_Model), Iter));

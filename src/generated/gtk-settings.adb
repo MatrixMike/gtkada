@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@ pragma Style_Checks (Off);
 pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 pragma Warnings(Off);  --  might be unused
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Settings is
@@ -48,7 +48,7 @@ package body Gtk.Settings is
       Origin   : String)
    is
       type Property_Value is record
-         Origin : Interfaces.C.Strings.chars_ptr;
+         Origin : Gtkada.Types.Chars_Ptr;
          Value  : GValue;
       end record;
       pragma Convention (C, Property_Value);
@@ -64,12 +64,30 @@ package body Gtk.Settings is
          Value  => Value);
    begin
       Internal (Get_Object (Settings), Name & ASCII.NUL, Val'Address);
-      Free (Val.Origin);
+      g_free (Val.Origin);
    end Set_Property_Value;
 
    package Type_Conversion_Gtk_Settings is new Glib.Type_Conversion_Hooks.Hook_Registrator
      (Get_Type'Access, Gtk_Settings_Record);
    pragma Unreferenced (Type_Conversion_Gtk_Settings);
+
+   --------------------
+   -- Reset_Property --
+   --------------------
+
+   procedure Reset_Property
+      (Self : not null access Gtk_Settings_Record;
+       Name : UTF8_String)
+   is
+      procedure Internal
+         (Self : System.Address;
+          Name : Gtkada.Types.Chars_Ptr);
+      pragma Import (C, Internal, "gtk_settings_reset_property");
+      Tmp_Name : Gtkada.Types.Chars_Ptr := New_String (Name);
+   begin
+      Internal (Get_Object (Self), Tmp_Name);
+      Free (Tmp_Name);
+   end Reset_Property;
 
    -------------------------
    -- Set_Double_Property --
@@ -83,12 +101,12 @@ package body Gtk.Settings is
    is
       procedure Internal
          (Self     : System.Address;
-          Name     : Interfaces.C.Strings.chars_ptr;
+          Name     : Gtkada.Types.Chars_Ptr;
           V_Double : Gdouble;
-          Origin   : Interfaces.C.Strings.chars_ptr);
+          Origin   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_settings_set_double_property");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_Origin : Interfaces.C.Strings.chars_ptr := New_String (Origin);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_Origin : Gtkada.Types.Chars_Ptr := New_String (Origin);
    begin
       Internal (Get_Object (Self), Tmp_Name, V_Double, Tmp_Origin);
       Free (Tmp_Origin);
@@ -107,12 +125,12 @@ package body Gtk.Settings is
    is
       procedure Internal
          (Self   : System.Address;
-          Name   : Interfaces.C.Strings.chars_ptr;
+          Name   : Gtkada.Types.Chars_Ptr;
           V_Long : Glong;
-          Origin : Interfaces.C.Strings.chars_ptr);
+          Origin : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_settings_set_long_property");
-      Tmp_Name   : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_Origin : Interfaces.C.Strings.chars_ptr := New_String (Origin);
+      Tmp_Name   : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_Origin : Gtkada.Types.Chars_Ptr := New_String (Origin);
    begin
       Internal (Get_Object (Self), Tmp_Name, V_Long, Tmp_Origin);
       Free (Tmp_Origin);
@@ -131,13 +149,13 @@ package body Gtk.Settings is
    is
       procedure Internal
          (Self     : System.Address;
-          Name     : Interfaces.C.Strings.chars_ptr;
-          V_String : Interfaces.C.Strings.chars_ptr;
-          Origin   : Interfaces.C.Strings.chars_ptr);
+          Name     : Gtkada.Types.Chars_Ptr;
+          V_String : Gtkada.Types.Chars_Ptr;
+          Origin   : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "gtk_settings_set_string_property");
-      Tmp_Name     : Interfaces.C.Strings.chars_ptr := New_String (Name);
-      Tmp_V_String : Interfaces.C.Strings.chars_ptr := New_String (V_String);
-      Tmp_Origin   : Interfaces.C.Strings.chars_ptr := New_String (Origin);
+      Tmp_Name     : Gtkada.Types.Chars_Ptr := New_String (Name);
+      Tmp_V_String : Gtkada.Types.Chars_Ptr := New_String (V_String);
+      Tmp_Origin   : Gtkada.Types.Chars_Ptr := New_String (Origin);
    begin
       Internal (Get_Object (Self), Tmp_Name, Tmp_V_String, Tmp_Origin);
       Free (Tmp_Origin);

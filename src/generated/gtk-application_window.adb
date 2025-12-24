@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,7 +26,7 @@ pragma Warnings (Off, "*is already use-visible*");
 with Glib.Type_Conversion_Hooks; use Glib.Type_Conversion_Hooks;
 pragma Warnings(Off);  --  might be unused
 with Gtkada.Bindings;            use Gtkada.Bindings;
-with Interfaces.C.Strings;       use Interfaces.C.Strings;
+with Gtkada.Types;               use Gtkada.Types;
 pragma Warnings(On);
 
 package body Gtk.Application_Window is
@@ -78,6 +78,21 @@ package body Gtk.Application_Window is
       end if;
    end Initialize;
 
+   ----------------------
+   -- Get_Help_Overlay --
+   ----------------------
+
+   function Get_Help_Overlay
+      (Self : not null access Gtk_Application_Window_Record)
+       return Gtk.Shortcuts_Window.Gtk_Shortcuts_Window
+   is
+      function Internal (Self : System.Address) return System.Address;
+      pragma Import (C, Internal, "gtk_application_window_get_help_overlay");
+      Stub_Gtk_Shortcuts_Window : Gtk.Shortcuts_Window.Gtk_Shortcuts_Window_Record;
+   begin
+      return Gtk.Shortcuts_Window.Gtk_Shortcuts_Window (Get_User_Data (Internal (Get_Object (Self)), Stub_Gtk_Shortcuts_Window));
+   end Get_Help_Overlay;
+
    ------------
    -- Get_Id --
    ------------
@@ -105,6 +120,22 @@ package body Gtk.Application_Window is
    end Get_Show_Menubar;
 
    ----------------------
+   -- Set_Help_Overlay --
+   ----------------------
+
+   procedure Set_Help_Overlay
+      (Self         : not null access Gtk_Application_Window_Record;
+       Help_Overlay : access Gtk.Shortcuts_Window.Gtk_Shortcuts_Window_Record'Class)
+   is
+      procedure Internal
+         (Self         : System.Address;
+          Help_Overlay : System.Address);
+      pragma Import (C, Internal, "gtk_application_window_set_help_overlay");
+   begin
+      Internal (Get_Object (Self), Get_Object_Or_Null (GObject (Help_Overlay)));
+   end Set_Help_Overlay;
+
+   ----------------------
    -- Set_Show_Menubar --
    ----------------------
 
@@ -130,9 +161,9 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_added");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -149,10 +180,10 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Enabled     : Glib.Gboolean);
       pragma Import (C, Internal, "g_action_group_action_enabled_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Boolean'Pos (Enabled));
       Free (Tmp_Action_Name);
@@ -168,9 +199,9 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_group_action_removed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);
@@ -187,10 +218,10 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           State       : System.Address);
       pragma Import (C, Internal, "g_action_group_action_state_changed");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (State));
       Free (Tmp_Action_Name);
@@ -207,10 +238,10 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Parameter   : System.Address);
       pragma Import (C, Internal, "g_action_group_activate_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Parameter));
       Free (Tmp_Action_Name);
@@ -262,10 +293,10 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr;
+          Action_Name : Gtkada.Types.Chars_Ptr;
           Value       : System.Address);
       pragma Import (C, Internal, "g_action_group_change_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name, Get_Object (Value));
       Free (Tmp_Action_Name);
@@ -281,9 +312,9 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_get_action_enabled");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -301,10 +332,10 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_parameter_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -322,10 +353,9 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -343,10 +373,9 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return System.Address;
+          Action_Name : Gtkada.Types.Chars_Ptr) return System.Address;
       pragma Import (C, Internal, "g_action_group_get_action_state_hint");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : System.Address;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -364,10 +393,10 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
+          Action_Name : Gtkada.Types.Chars_Ptr)
           return Glib.Variant.Gvariant_Type;
       pragma Import (C, Internal, "g_action_group_get_action_state_type");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Variant.Gvariant_Type;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -385,9 +414,9 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr) return Glib.Gboolean;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Gboolean;
       pragma Import (C, Internal, "g_action_group_has_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Gboolean;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -420,10 +449,9 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr)
-          return Glib.Action.Gaction;
+          Action_Name : Gtkada.Types.Chars_Ptr) return Glib.Action.Gaction;
       pragma Import (C, Internal, "g_action_map_lookup_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Return      : Glib.Action.Gaction;
    begin
       Tmp_Return := Internal (Get_Object (Self), Tmp_Action_Name);
@@ -446,7 +474,7 @@ package body Gtk.Application_Window is
    is
       function Internal
          (Self               : System.Address;
-          Action_Name        : Interfaces.C.Strings.chars_ptr;
+          Action_Name        : Gtkada.Types.Chars_Ptr;
           Acc_Enabled        : access Glib.Gboolean;
           Acc_Parameter_Type : access Glib.Variant.Gvariant_Type;
           Acc_State_Type     : access Glib.Variant.Gvariant_Type;
@@ -458,7 +486,7 @@ package body Gtk.Application_Window is
       Acc_State_Type     : aliased Glib.Variant.Gvariant_Type;
       Acc_State_Hint     : aliased Glib.Variant.Gvariant;
       Acc_State          : aliased Glib.Variant.Gvariant;
-      Tmp_Action_Name    : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name    : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
       Tmp_Acc_Enabled    : aliased Glib.Gboolean;
       Tmp_Acc_State_Hint : aliased System.Address;
       Tmp_Acc_State      : aliased System.Address;
@@ -495,9 +523,9 @@ package body Gtk.Application_Window is
    is
       procedure Internal
          (Self        : System.Address;
-          Action_Name : Interfaces.C.Strings.chars_ptr);
+          Action_Name : Gtkada.Types.Chars_Ptr);
       pragma Import (C, Internal, "g_action_map_remove_action");
-      Tmp_Action_Name : Interfaces.C.Strings.chars_ptr := New_String (Action_Name);
+      Tmp_Action_Name : Gtkada.Types.Chars_Ptr := New_String (Action_Name);
    begin
       Internal (Get_Object (Self), Tmp_Action_Name);
       Free (Tmp_Action_Name);

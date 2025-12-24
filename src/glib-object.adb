@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  GtkAda - Ada95 binding for Gtk+/Gnome                   --
 --                                                                          --
---                     Copyright (C) 2001-2018, AdaCore                     --
+--                     Copyright (C) 2001-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,9 +21,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C.Strings;
-with Unchecked_Conversion;
-with Unchecked_Deallocation;
+with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with System;          use System;
 
 with Glib.Type_Conversion_Hooks;
@@ -53,7 +52,7 @@ package body Glib.Object is
      (Ancestor     : GType;
       Class_Record : in out Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array;
+      Signals      : Interfaces.C.Strings.chars_ptr_array;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null;
@@ -70,7 +69,7 @@ package body Glib.Object is
    ----------------
 
    procedure Deallocate (Object : access GObject_Record) is
-      procedure Free is new Unchecked_Deallocation
+      procedure Free is new Ada.Unchecked_Deallocation
         (GObject_Record'Class, GObject);
 
       Obj : GObject := GObject (Object);
@@ -86,7 +85,8 @@ package body Glib.Object is
    procedure Free_User_Data (Data : System.Address) is
       pragma Warnings (Off);
       --  This UC is safe aliasing-wise, so kill warning
-      function Convert is new Unchecked_Conversion (System.Address, GObject);
+      function Convert is
+        new Ada.Unchecked_Conversion (System.Address, GObject);
       pragma Warnings (On);
 
    begin
@@ -310,13 +310,12 @@ package body Glib.Object is
      (Ancestor     : GType;
       Class_Record : in out Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array := No_Signals;
+      Signals      : Interfaces.C.Strings.chars_ptr_array := No_Signals;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null)
    is
       Ignored : Boolean;
-      pragma Unreferenced (Ignored);
    begin
       Initialize_Class_Record
         (Ancestor, Class_Record, Type_Name, Signals, Parameters, Returns,
@@ -331,7 +330,7 @@ package body Glib.Object is
      (Ancestor     : GType;
       Class_Record : not null access Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array := No_Signals;
+      Signals      : Interfaces.C.Strings.chars_ptr_array := No_Signals;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null)
@@ -353,7 +352,7 @@ package body Glib.Object is
      (Ancestor     : GType;
       Class_Record : in out Ada_GObject_Class;
       Type_Name    : String;
-      Signals      : Gtkada.Types.Chars_Ptr_Array;
+      Signals      : Interfaces.C.Strings.chars_ptr_array;
       Parameters   : Signal_Parameter_Types := Null_Parameter_Types;
       Returns      : Signal_Return_Types := No_Return_Types;
       Class_Init   : Ada_Class_Init := null;
@@ -416,11 +415,11 @@ package body Glib.Object is
    -------------------
 
    procedure Add_Interface
-      (Klass : Ada_GObject_Class;
-       Iface : GType;
-       Info  : not null access GInterface_Info)
+     (Klass : Ada_GObject_Class;
+      Iface : GType;
+      Info  : not null GInterface_Info_Access)
    is
-      procedure Internal (Klass, Iface : GType; Info : access GInterface_Info);
+      procedure Internal (Klass, Iface : GType; Info : GInterface_Info_Access);
       pragma Import (C, Internal, "g_type_add_interface_static");
    begin
       Internal (Klass.The_Type, Iface, Info);
@@ -556,7 +555,7 @@ package body Glib.Object is
       type Cb_Record_Access is access all Cb_Record;
 
       function Convert is new
-        Unchecked_Conversion (System.Address, Cb_Record_Access);
+        Ada.Unchecked_Conversion (System.Address, Cb_Record_Access);
 
       procedure Set_Data_Internal
         (Object  : System.Address;
@@ -583,10 +582,10 @@ package body Glib.Object is
 
       procedure Free_Data (Data : System.Address) is
          procedure Internal is new
-           Unchecked_Deallocation (Cb_Record, Cb_Record_Access);
+           Ada.Unchecked_Deallocation (Cb_Record, Cb_Record_Access);
 
          procedure Internal2 is new
-           Unchecked_Deallocation (Data_Type, Data_Access);
+           Ada.Unchecked_Deallocation (Data_Type, Data_Access);
 
          D : Cb_Record_Access := Convert (Data);
 
@@ -697,7 +696,7 @@ package body Glib.Object is
          On_Destroyed : On_Destroyed_Callback := null)
       is
          function Convert is new
-           Unchecked_Conversion (Cb_Record_Access, System.Address);
+           Ada.Unchecked_Conversion (Cb_Record_Access, System.Address);
          D : constant Cb_Record_Access :=
            new Cb_Record'(Ptr => new Data_Type'(Data),
                           On_Destroyed => On_Destroyed);
@@ -721,7 +720,7 @@ package body Glib.Object is
          On_Destroyed : On_Destroyed_Callback := null)
       is
          function Convert is new
-           Unchecked_Conversion (Cb_Record_Access, System.Address);
+           Ada.Unchecked_Conversion (Cb_Record_Access, System.Address);
          D : constant Cb_Record_Access :=
            new Cb_Record'(Ptr => new Data_Type'(Data),
                           On_Destroyed => On_Destroyed);

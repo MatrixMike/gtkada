@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --      Copyright (C) 1998-2000 E. Briot, J. Brobecker and A. Charlet       --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -137,7 +137,6 @@
 --  </description>
 
 pragma Warnings (Off, "*is already use-visible*");
-with Glib;         use Glib;
 with Glib.Object;  use Glib.Object;
 with Glib.Variant; use Glib.Variant;
 
@@ -327,7 +326,7 @@ package Glib.Menu_Model is
        Call  : Cb_GObject_Gint_Gint_Gint_Void;
        Slot  : not null access Glib.Object.GObject_Record'Class;
        After : Boolean := False);
-   --  Emitted when a change has occured to the menu.
+   --  Emitted when a change has occurred to the menu.
    --
    --  The only changes that can occur to a menu is that items are removed or
    --  added. Items may not change (except by being removed and added back in
